@@ -1,0 +1,116 @@
+
+Selenium 階層指定 - 応用編
+実践的な要素指定テクニックと複雑なケースへの対応
+
+複雑な階層指定
+属性による検索
+実践コード例
+1
+テーブル内の特定セルを取得
+HTML構造
+<table id="data-table">
+  <tr>
+    <td>名前</td>
+    <td>年齢</td>
+  </tr>
+  <tr>
+    <td>田中</td>
+    <td>25</td>
+  </tr>
+  <tr>
+    <td>佐藤</td>
+    <td>30</td>
+  </tr>
+</table>
+XPath
+//table[@id="data-table"]//tr[3]/td[2]
+CSS Selector
+#data-table tr:nth-child(3) td:nth-child(2)
+Python コード
+# 佐藤の年齢を取得
+age = driver.find_element(
+  By.XPATH,
+  '//table[@id="data-table"]//tr[3]/td[2]'
+).text
+3行目の2列目（佐藤の年齢）を取得
+
+2
+特定テキストを含む要素の兄弟要素
+HTML構造
+<div class="user-card">
+  <span class="label">名前:</span>
+  <span class="value">山田太郎</span>
+</div>
+XPath
+//span[text()="名前:"]/following-sibling::span
+CSS Selector
+なし（CSSでは困難）
+Python コード
+# 「名前:」の次の要素を取得
+name = driver.find_element(
+  By.XPATH,
+  '//span[text()="名前:"]/following-sibling::span'
+).text
+特定テキストの次にある兄弟要素を取得
+
+3
+複数条件での絞り込み
+HTML構造
+<div class="product">
+  <h3>商品A</h3>
+  <span class="price">1000円</span>
+  <button class="btn">購入</button>
+</div>
+<div class="product sold-out">
+  <h3>商品B</h3>
+  <span class="price">2000円</span>
+  <button class="btn">購入</button>
+</div>
+XPath
+//div[@class="product" and not(contains(@class, "sold-out"))]//button
+CSS Selector
+div.product:not(.sold-out) button
+Python コード
+# 在庫ありの商品の購入ボタン
+buttons = driver.find_elements(
+  By.CSS_SELECTOR,
+  'div.product:not(.sold-out) button'
+)
+売り切れでない商品のボタンのみ取得
+
+4
+動的リストの最後の要素
+HTML構造
+<ul id="notifications">
+  <li>通知1</li>
+  <li>通知2</li>
+  <li>通知3</li>
+  <!-- 動的に増える -->
+</ul>
+XPath
+//ul[@id="notifications"]/li[last()]
+CSS Selector
+#notifications li:last-child
+Python コード
+# 最新の通知を取得
+last_notification = driver.find_element(
+  By.CSS_SELECTOR,
+  '#notifications li:last-child'
+).text
+動的に追加される最後の要素を取得
+
+応用テクニックのポイント
+階層の組み合わせ
+親要素から段階的に絞り込むことで、より正確な要素特定が可能
+
+属性の活用
+contains()や部分一致を使って柔軟な検索を実現
+
+待機処理
+動的コンテンツでは WebDriverWait との組み合わせが重要
+
+相対パス
+親要素から相対的に検索することでコードの保守性が向上
+
+
+
