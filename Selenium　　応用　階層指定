@@ -1,0 +1,501 @@
+キーワードやクリエイターで検索
+
+
+677
+メニュー
+ 投稿
+
+あなただけに表示されています
+見出し画像を設定してみませんか?
+見出し画像があると、もっと作品のイメージが伝わります！
+かんたんにオリジナル画像を作ったり、他のクリエイターが提供した画像から選んだりすることもできます。
+ぜひ活用してみましょう！
+
+
+Selenium 階層指定 - 応用編　ソースコード例あり　Python
+
+YUKIKO@BI＆AIを極めたい（転職活動中スカウト歓迎）
+YUKIKO@BI＆AIを極めたい（転職活動中スカウト歓迎）
+2025年10月1日 23:44
+
+
+Selenium 階層指定 - 応用編
+実践的な要素指定テクニックと複雑なケースへの対応
+
+
+複雑な階層指定属性による検索実践コード例
+
+
+目次
+Selenium 階層指定 - 応用編
+部分一致で属性検索
+前方一致・後方一致
+複数属性の組み合わせ
+属性の有無で判定
+Selenium 階層指定 - 応用編
+ログインフォームの操作
+動的に読み込まれる要素の待機
+ドロップダウンメニューの選択
+ページネーション処理
+
+すべて表示
+部分一致で属性検索
+HTML構造
+
+<input type="text"
+  placeholder="メールアドレスを入力"
+  name="user-email-input"/>
+
+copy
+XPath
+
+//input[contains(@name, "email")]
+
+copy
+CSS Selector
+
+input[name*="email"]
+
+copy
+Python コード
+
+# nameに"email"を含む入力欄
+email_field = driver.find_element(
+  By.CSS_SELECTOR,
+  'input[name*="email"]'
+)
+
+copy
+属性値に特定文字列を含む要素を検索
+2
+
+前方一致・後方一致
+HTML構造
+
+<a href="https://example.com/page1">リンク1</a>
+<a href="https://example.com/page2">リンク2</a>
+<a href="download.pdf">PDF</a>
+
+copy
+XPath
+
+//a[starts-with(@href, "https")]
+
+copy
+CSS Selector
+
+a[href^="https"]
+
+copy
+Python コード
+
+# httpsで始まるリンクのみ
+links = driver.find_elements(
+  By.CSS_SELECTOR,
+  'a[href^="https"]'
+)
+
+# .pdfで終わるリンク
+pdf_links = driver.find_elements(
+  By.CSS_SELECTOR,
+  'a[href$=".pdf"]'
+)
+
+copy
+^は前方一致、$は後方一致
+3
+
+複数属性の組み合わせ
+HTML構造
+
+<button type="submit"
+  class="btn primary"
+  data-action="save">保存</button>
+
+copy
+XPath
+
+//button[@type="submit" and @data-action="save"]
+
+copy
+CSS Selector
+
+button[type="submit"][data-action="save"]
+
+copy
+Python コード
+
+# 複数の属性で絞り込み
+save_btn = driver.find_element(
+  By.CSS_SELECTOR,
+  'button[type="submit"][data-action="save"]'
+)
+
+copy
+複数の属性条件で要素を特定
+4
+
+属性の有無で判定
+HTML構造
+
+<input type="checkbox" checked>
+<input type="checkbox">
+<input type="checkbox" checked>
+
+copy
+XPath
+
+//input[@checked]
+
+copy
+CSS Selector
+
+input[checked]
+
+copy
+Python コード
+
+# チェック済みのチェックボックス
+checked_boxes = driver.find_elements(
+  By.CSS_SELECTOR,
+  'input[checked]'
+)
+
+copy
+特定の属性を持つ要素のみ取得
+応用テクニックのポイント
+階層の組み合わせ
+親要素から段階的に絞り込むことで、より正確な要素特定が可能
+属性の活用
+contains()や部分一致を使って柔軟な検索を実現
+待機処理
+動的コンテンツでは WebDriverWait との組み合わせが重要
+相対パス
+親要素から相対的に検索することでコードの保守性が向上
+
+ーーーーーーーーーー
+
+
+Selenium 階層指定 - 応用編
+
+
+実践的な要素指定テクニックと複雑なケースへの対応
+複雑な階層指定属性による検索実践コード例
+1
+
+ログインフォームの操作
+HTML構造
+
+<div id="login">
+  <input name="username"/>
+  <input name="password" type="password"/>
+  <button type="submit">ログイン</button>
+</div>
+
+copy
+Python コード
+
+# フォーム要素をまとめて取得
+login_box = driver.find_element(By.ID, "login")
+username = login_box.find_element(By.NAME, "username")
+password = login_box.find_element(By.NAME, "password")
+submit = login_box.find_element(
+    By.CSS_SELECTOR, 
+    "button[type='submit']"
+)
+
+# 入力と送信
+username.send_keys("user@example.com")
+password.send_keys("password123")
+submit.click()
+
+copy
+フォーム要素を親から取得して操作
+2
+
+動的に読み込まれる要素の待機
+Python コード
+
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+# 要素が表示されるまで最大10秒待機
+element = WebDriverWait(driver, 10).until(
+    EC.presence_of_element_located(
+        (By.XPATH, "//div[@class='loaded-content']//button")
+    )
+)
+
+# 要素がクリック可能になるまで待機
+button = WebDriverWait(driver, 10).until(
+    EC.element_to_be_clickable(
+        (By.CSS_SELECTOR, "button.dynamic-btn")
+    )
+)
+
+copy
+階層指定と待機処理を組み合わせる
+3
+
+ドロップダウンメニューの選択
+HTML構造
+
+<div class="dropdown">
+  <button class="dropdown-toggle">選択</button>
+  <ul class="dropdown-menu">
+    <li data-value="1">オプション1</li>
+    <li data-value="2">オプション2</li>
+  </ul>
+</div>
+
+copy
+Python コード
+
+# ドロップダウンを開く
+dropdown = driver.find_element(By.CLASS_NAME, "dropdown")
+dropdown.find_element(
+    By.CLASS_NAME, 
+    "dropdown-toggle"
+).click()
+
+# 特定のオプションを選択
+option = dropdown.find_element(
+    By.XPATH,
+    ".//li[@data-value='2']"
+)
+option.click()
+
+copy
+親要素から相対パスで子要素を操作
+4
+
+ページネーション処理
+Python コード
+
+# 全ページのデータを収集
+all_data = []
+
+while True:
+    # 現在ページのアイテムを取得
+    items = driver.find_elements(
+        By.CSS_SELECTOR,
+        "div.item-list > div.item"
+    )
+    
+    for item in items:
+        title = item.find_element(
+            By.CLASS_NAME, 
+            "title"
+        ).text
+        all_data.append(title)
+    
+    # 次ページボタンを探す
+    try:
+        next_btn = driver.find_element(
+            By.XPATH,
+            "//button[contains(text(), '次へ') and not(@disabled)]"
+        )
+        next_btn.click()
+        time.sleep(2)
+    except:
+        break
+
+copy
+階層指定を使った複数ページの自動巡回
+応用テクニックのポイント
+階層の組み合わせ
+親要素から段階的に絞り込むことで、より正確な要素特定が可能
+属性の活用
+contains()や部分一致を使って柔軟な検索を実現
+待機処理
+動的コンテンツでは WebDriverWait との組み合わせが重要
+相対パス
+親要素から相対的に検索することでコードの保守性が向上
+
+
+Selenium 階層指定 - 応用編
+実践的な要素指定テクニックと複雑なケースへの対応
+複雑な階層指定属性による検索実践コード例
+1
+
+テーブル内の特定セルを取得
+HTML構造
+
+<table id="data-table">
+  <tr>
+    <td>名前</td>
+    <td>年齢</td>
+  </tr>
+  <tr>
+    <td>田中</td>
+    <td>25</td>
+  </tr>
+  <tr>
+    <td>佐藤</td>
+    <td>30</td>
+  </tr>
+</table>
+
+copy
+XPath
+
+//table[@id="data-table"]//tr[3]/td[2]
+
+copy
+CSS Selector
+
+#data-table tr:nth-child(3) td:nth-child(2)
+
+copy
+Python コード
+
+# 佐藤の年齢を取得
+age = driver.find_element(
+  By.XPATH,
+  '//table[@id="data-table"]//tr[3]/td[2]'
+).text
+
+copy
+3行目の2列目（佐藤の年齢）を取得
+2
+
+特定テキストを含む要素の兄弟要素
+HTML構造
+
+<div class="user-card">
+  <span class="label">名前:</span>
+  <span class="value">山田太郎</span>
+</div>
+
+copy
+XPath
+
+//span[text()="名前:"]/following-sibling::span
+
+copy
+CSS Selector
+
+なし（CSSでは困難）
+
+copy
+Python コード
+
+# 「名前:」の次の要素を取得
+name = driver.find_element(
+  By.XPATH,
+  '//span[text()="名前:"]/following-sibling::span'
+).text
+
+copy
+特定テキストの次にある兄弟要素を取得
+3
+
+複数条件での絞り込み
+HTML構造
+
+<div class="product">
+  <h3>商品A</h3>
+  <span class="price">1000円</span>
+  <button class="btn">購入</button>
+</div>
+<div class="product sold-out">
+  <h3>商品B</h3>
+  <span class="price">2000円</span>
+  <button class="btn">購入</button>
+</div>
+
+copy
+XPath
+
+//div[@class="product" and not(contains(@class, "sold-out"))]//button
+
+copy
+CSS Selector
+
+div.product:not(.sold-out) button
+
+copy
+Python コード
+
+# 在庫ありの商品の購入ボタン
+buttons = driver.find_elements(
+  By.CSS_SELECTOR,
+  'div.product:not(.sold-out) button'
+)
+
+copy
+売り切れでない商品のボタンのみ取得
+4
+
+動的リストの最後の要素
+HTML構造
+
+<ul id="notifications">
+  <li>通知1</li>
+  <li>通知2</li>
+  <li>通知3</li>
+  <!-- 動的に増える -->
+</ul>
+
+copy
+XPath
+
+//ul[@id="notifications"]/li[last()]
+
+copy
+CSS Selector
+
+#notifications li:last-child
+
+copy
+Python コード
+
+# 最新の通知を取得
+last_notification = driver.find_element(
+  By.CSS_SELECTOR,
+  '#notifications li:last-child'
+).text
+
+copy
+動的に追加される最後の要素を取得
+応用テクニックのポイント
+階層の組み合わせ
+親要素から段階的に絞り込むことで、より正確な要素特定が可能
+属性の活用
+contains()や部分一致を使って柔軟な検索を実現
+待機処理
+動的コンテンツでは WebDriverWait との組み合わせが重要
+相対パス
+親要素から相対的に検索することでコードの保守性が向上
+
+#data
+#notifications
+
+
+
+
+
+YUKIKO@BI＆AIを極めたい（転職活動中スカウト歓迎）
+YUKIKO@BI＆AIを極めたい（転職活動中スカウト歓迎）
+生成AIパスポート試験合格に向けて学習中！
+Python3エンジニア認定試験合格
+2025年7月：BIの学習中です！
+
+【技術】
+Python/Django/スクレイピング/業務自動化
+
+
+
+noteプレミアム
+note pro
+よくある質問・noteの使い方
+プライバシー
+クリエイターへのお問い合わせ
+フィードバック
+ご利用規約
+通常ポイント利用特約
+加盟店規約
+資⾦決済法に基づく表⽰
+特商法表記
+投資情報の免責事項
+Selenium 階層指定 - 応用編　ソースコード例あり　Python｜YUKIKO@BI＆AIを極めたい（転職活動中スカウト歓迎）
