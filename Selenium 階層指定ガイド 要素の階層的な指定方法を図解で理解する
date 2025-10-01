@@ -1,0 +1,69 @@
+
+Selenium 階層指定ガイド
+要素の階層的な指定方法を図解で理解する
+
+XPath
+CSS Selector
+Python コード
+1
+絶対パス
+HTML構造
+<html>
+  <body>
+    <div id="container">
+      <ul>
+        <li>項目1</li>
+        <li>項目2</li>
+      </ul>
+    </div>
+  </body>
+</html>
+セレクタ
+/html/body/div/ul/li[2]
+💡
+ルートから全ての階層を指定（非推奨）
+
+2
+相対パス
+HTML構造
+<div id="container">
+  <ul>
+    <li>項目1</li>
+    <li>項目2</li>
+  </ul>
+</div>
+セレクタ
+//div[@id="container"]//li[2]
+💡
+任意の階層から検索開始
+
+3
+親要素から子要素
+HTML構造
+<div class="parent">
+  <span class="child">テキスト</span>
+</div>
+セレクタ
+//div[@class="parent"]/span
+//div[@class="parent"]//span
+💡
+/ は直接の子要素、// は子孫要素全て
+
+4
+子から親への参照
+HTML構造
+<div>
+  <button id="btn">
+    クリック
+  </button>
+</div>
+セレクタ
+//button[@id="btn"]/parent::div
+💡
+子要素から親要素を取得
+
+重要なポイント
+• XPath: / は直接の子、// は子孫全体
+• CSS: > は直接の子、スペースは子孫全体
+• 階層を使うと要素の特定がより正確になります
+• 動的なページでは相対パスが推奨されます
