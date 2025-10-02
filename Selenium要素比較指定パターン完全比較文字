@@ -1,0 +1,1995 @@
+import React, { useState } from 'react';
+import { Code, Map, MousePointer, Layout, Lightbulb } from 'lucide-react';
+
+const SeleniumPatternComparison = () => {
+  const [activePattern, setActivePattern] = useState(0);
+
+  const patterns = [
+    {
+      title: 'ネストされたメニュー構造',
+      html: `<nav id="main-menu">
+  <ul class="menu-list">
+    <li class="menu-item">
+      <a href="/home">ホーム</a>
+    </li>
+    <li class="menu-item dropdown">
+      <a href="/products">製品</a>
+      <ul class="submenu">
+        <li><a href="/electronics">電子機器</a></li>
+        <li><a href="/furniture">家具</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>`,
+      target: '「電子機器」リンクをクリック',
+      xpath: '//nav[@id="main-menu"]//ul[@class="submenu"]/li[1]/a',
+      css: '#main-menu .submenu li:first-child a',
+      coordinates: `menu = driver.find_element(By.ID, "main-menu")
+submenu = menu.find_element(By.CLASS_NAME, "submenu")
+location = submenu.location
+size = submenu.size
+
+# サブメニュー内の最初のリンクの位置を計算
+target_x = location['x'] + 20
+target_y = location['y'] + 15
+
+actions = ActionChains(driver)
+actions.move_by_offset(target_x, target_y).click().perform()`,
+      coordMethod: 'relative',
+      visual: {
+        type: 'nested-menu',
+        highlight: 'submenu-first'
+      }
+    },
+    {
+      title: 'テーブルの特定セル',
+      html: `<table id="data-table" class="table">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>名前</th>
+      <th>価格</th>
+      <th>在庫</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="row" data-id="101">
+      <td>101</td>
+      <td>ノートPC</td>
+      <td class="price">98,000円</td>
+      <td class="stock">5</td>
+    </tr>
+    <tr class="row" data-id="102">
+      <td>102</td>
+      <td>マウス</td>
+      <td class="price">2,500円</td>
+      <td class="stock">20</td>
+    </tr>
+  </tbody>
+</table>`,
+      target: 'ID:102 の価格セルを取得',
+      xpath: '//table[@id="data-table"]//tr[@data-id="102"]/td[@class="price"]',
+      css: '#data-table tr[data-id="102"] td.price',
+      coordinates: `table = driver.find_element(By.ID, "data-table")
+rows = table.find_elements(By.CSS_SELECTOR, "tbody tr")
+
+# 2行目（インデックス1）の3列目（価格）
+target_row = rows[1]
+cells = target_row.find_elements(By.TAG_NAME, "td")
+price_cell = cells[2]
+
+# セルの座標を取得
+location = price_cell.location
+center_x = location['x'] + price_cell.size['width'] / 2
+center_y = location['y'] + price_cell.size['height'] / 2`,
+      coordMethod: 'cell-position',
+      visual: {
+        type: 'table',
+        highlight: 'row2-col3'
+      }
+    },
+    {
+      title: 'フォーム内の入力フィールド',
+      html: `<div id="login-form" class="form-container">
+  <div class="form-group">
+    <label for="username">ユーザー名</label>
+    <input type="text" 
+           id="username" 
+           name="user" 
+           class="form-control"
+           placeholder="名前を入力"/>
+  </div>
+  <div class="form-group">
+    <label for="password">パスワード</label>
+    <input type="password" 
+           id="password" 
+           name="pass" 
+           class="form-control"
+           placeholder="パスワードを入力"/>
+  </div>
+  <button type="submit" class="btn-primary">
+    ログイン
+  </button>
+</div>`,
+      target: 'パスワード入力欄に入力',
+      xpath: '//div[@id="login-form"]//input[@type="password"]',
+      css: '#login-form input[type="password"]',
+      coordinates: `form = driver.find_element(By.ID, "login-form")
+form_groups = form.find_elements(By.CLASS_NAME, "form-group")
+
+# 2番目のform-group（パスワード）
+password_group = form_groups[1]
+input_field = password_group.find_element(By.TAG_NAME, "input")
+
+# 入力フィールドの中央をクリック
+actions = ActionChains(driver)
+actions.move_to_element(input_field).click().perform()
+input_field.send_keys("password123")`,
+      coordMethod: 'form-field',
+      visual: {
+        type: 'form',
+        highlight: 'password-field'
+      }
+    },
+    {
+      title: 'カード型レイアウト',
+      html: `<div class="container">
+  <div class="card" data-product-id="A001">
+    <img src="product1.jpg" class="card-img"/>
+    <div class="card-body">
+      <h3 class="card-title">商品A</h3>
+      <p class="card-price">5,000円</p>
+      <button class="btn-cart">カートに追加</button>
+    </div>
+  </div>
+  <div class="card" data-product-id="A002">
+    <img src="product2.jpg" class="card-img"/>
+    <div class="card-body">
+      <h3 class="card-title">商品B</h3>
+      <p class="card-price">8,000円</p>
+      <button class="btn-cart">カートに追加</button>
+    </div>
+  </div>
+</div>`,
+      target: '商品Bのカートボタンをクリック',
+      xpath: '//div[@class="card" and @data-product-id="A002"]//button[@class="btn-cart"]',
+      css: '.card[data-product-id="A002"] .btn-cart',
+      coordinates: `cards = driver.find_elements(By.CLASS_NAME, "card")
+
+# 2番目のカード（商品B）
+card_b = cards[1]
+button = card_b.find_element(By.CLASS_NAME, "btn-cart")
+
+# ボタンの位置を取得
+btn_location = button.location
+btn_size = button.size
+
+# ボタン中央の座標
+click_x = btn_location['x'] + btn_size['width'] / 2
+click_y = btn_location['y'] + btn_size['height'] / 2
+
+actions = ActionChains(driver)
+actions.move_by_offset(click_x, click_y).click().perform()`,
+      coordMethod: 'card-layout',
+      visual: {
+        type: 'cards',
+        highlight: 'card2-button'
+      }
+    },
+    {
+      title: 'モーダルダイアログ',
+      html: `<div class="overlay" style="display:block">
+  <div class="modal" id="confirm-modal">
+    <div class="modal-header">
+      <h2>確認</h2>
+      <button class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+      <p>本当に削除しますか？</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel">
+        キャンセル
+      </button>
+      <button class="btn btn-confirm">
+        削除する
+      </button>
+    </div>
+  </div>
+</div>`,
+      target: '削除ボタンをクリック',
+      xpath: '//div[@id="confirm-modal"]//div[@class="modal-footer"]/button[@class="btn btn-confirm"]',
+      css: '#confirm-modal .modal-footer .btn-confirm',
+      coordinates: `# モーダルが表示されるまで待機
+modal = WebDriverWait(driver, 10).until(
+    EC.visibility_of_element_located(
+        (By.ID, "confirm-modal")
+    )
+)
+
+# モーダル内のボタンを相対位置で取得
+footer = modal.find_element(By.CLASS_NAME, "modal-footer")
+buttons = footer.find_elements(By.CLASS_NAME, "btn")
+
+# 2番目のボタン（削除する）
+confirm_btn = buttons[1]
+
+# 座標計算
+modal_loc = modal.location
+btn_loc = confirm_btn.location
+
+# モーダル基準の相対座標
+relative_x = btn_loc['x'] - modal_loc['x']
+relative_y = btn_loc['y'] - modal_loc['y']`,
+      coordMethod: 'modal-position',
+      visual: {
+        type: 'modal',
+        highlight: 'confirm-button'
+      }
+    },
+    {
+      title: '動的リスト（無限スクロール）',
+      html: `<div id="infinite-scroll" class="scroll-container">
+  <div class="item" data-index="1">
+    <span class="item-title">アイテム 1</span>
+    <button class="item-action">詳細</button>
+  </div>
+  <div class="item" data-index="2">
+    <span class="item-title">アイテム 2</span>
+    <button class="item-action">詳細</button>
+  </div>
+  <!-- 動的に追加されるアイテム -->
+  <div class="item" data-index="50">
+    <span class="item-title">アイテム 50</span>
+    <button class="item-action">詳細</button>
+  </div>
+</div>`,
+      target: '50番目のアイテムの詳細ボタン',
+      xpath: '//div[@id="infinite-scroll"]//div[@data-index="50"]/button[@class="item-action"]',
+      css: '#infinite-scroll .item[data-index="50"] .item-action',
+      coordinates: `container = driver.find_element(By.ID, "infinite-scroll")
+
+# 特定のアイテムまでスクロール
+target_item = driver.find_element(
+    By.CSS_SELECTOR, 
+    '.item[data-index="50"]'
+)
+
+# 要素が見えるまでスクロール
+driver.execute_script(
+    "arguments[0].scrollIntoView({block: 'center'});",
+    target_item
+)
+time.sleep(0.5)
+
+# アイテムの詳細ボタンを取得
+button = target_item.find_element(
+    By.CLASS_NAME, 
+    "item-action"
+)
+
+# ボタンの画面上の座標
+location = button.location
+viewport_offset = driver.execute_script(
+    "return arguments[0].getBoundingClientRect();",
+    button
+)
+
+# 実際の表示位置
+visible_x = viewport_offset['x']
+visible_y = viewport_offset['y']`,
+      coordMethod: 'scroll-to-element',
+      visual: {
+        type: 'infinite-scroll',
+        highlight: 'item-50'
+      }
+    }
+  ];
+
+  const VisualDemo = ({ visual }) => {
+    const { type, highlight } = visual;
+
+    if (type === 'nested-menu') {
+      return (
+        <div className="bg-gray-100 p-4 rounded-lg border-2 border-gray-300 min-h-64">
+          <div className="bg-blue-600 text-white p-3 rounded-t-lg font-bold">
+            ナビゲーションメニュー
+          </div>
+          <div className="bg-white p-4 rounded-b-lg">
+            <div className="space-y-2">
+              <div className="p-2 hover:bg-gray-100 rounded">🏠 ホーム</div>
+              <div className="p-2 bg-blue-50 rounded">
+                <div className="font-bold">📦 製品 ▼</div>
+                <div className="ml-6 mt-2 space-y-1">
+                  <div className={`p-2 rounded ${highlight === 'submenu-first' ? 'bg-yellow-300 border-2 border-yellow-600' : 'bg-gray-50'}`}>
+                    💻 電子機器 ← ターゲット
+                  </div>
+                  <div className="p-2 bg-gray-50 rounded">🪑 家具</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 text-sm text-gray-600 bg-yellow-50 p-2 rounded border-l-4 border-yellow-400">
+            階層: nav → ul.menu-list → li.dropdown → ul.submenu → li[1] → a
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'table') {
+      return (
+        <div className="bg-white rounded-lg border-2 border-gray-300 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-blue-600 text-white">
+              <tr>
+                <th className="p-2 border">ID</th>
+                <th className="p-2 border">名前</th>
+                <th className="p-2 border">価格</th>
+                <th className="p-2 border">在庫</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="bg-gray-50">
+                <td className="p-2 border text-center">101</td>
+                <td className="p-2 border">ノートPC</td>
+                <td className="p-2 border text-right">98,000円</td>
+                <td className="p-2 border text-center">5</td>
+              </tr>
+              <tr className="bg-white">
+                <td className="p-2 border text-center">102</td>
+                <td className="p-2 border">マウス</td>
+                <td className={`p-2 border text-right ${highlight === 'row2-col3' ? 'bg-yellow-300 border-2 border-yellow-600 font-bold' : ''}`}>
+                  2,500円 {highlight === 'row2-col3' && '← ターゲット'}
+                </td>
+                <td className="p-2 border text-center">20</td>
+              </tr>
+            </tbody>
+          </table>
+          <div className="p-2 text-sm text-gray-600 bg-yellow-50 border-t-2 border-yellow-400">
+            階層: table#data-table → tbody → tr[data-id="102"] → td.price
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'form') {
+      return (
+        <div className="bg-white p-6 rounded-lg border-2 border-gray-300 max-w-md mx-auto">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-bold mb-1">ユーザー名</label>
+              <input 
+                type="text" 
+                className="w-full p-2 border-2 border-gray-300 rounded" 
+                placeholder="名前を入力"
+                readOnly
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-1">パスワード</label>
+              <input 
+                type="password" 
+                className={`w-full p-2 border-2 rounded ${highlight === 'password-field' ? 'border-yellow-600 bg-yellow-100' : 'border-gray-300'}`}
+                placeholder="パスワードを入力"
+                readOnly
+              />
+              {highlight === 'password-field' && (
+                <div className="text-xs text-yellow-700 mt-1">← ターゲット</div>
+              )}
+            </div>
+            <button className="w-full bg-blue-600 text-white p-2 rounded font-bold">
+              ログイン
+            </button>
+          </div>
+          <div className="mt-4 text-sm text-gray-600 bg-yellow-50 p-2 rounded border-l-4 border-yellow-400">
+            階層: div#login-form → div.form-group[2] → input[type="password"]
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'cards') {
+      return (
+        <div className="grid grid-cols-2 gap-4 p-4 bg-gray-100 rounded-lg border-2 border-gray-300">
+          <div className="bg-white rounded-lg shadow p-3">
+            <div className="bg-gray-200 h-24 rounded mb-2 flex items-center justify-center">
+              🖼️ 商品A
+            </div>
+            <h3 className="font-bold">商品A</h3>
+            <p className="text-sm text-gray-600">5,000円</p>
+            <button className="w-full bg-blue-500 text-white p-2 rounded mt-2 text-sm">
+              カートに追加
+            </button>
+          </div>
+          <div className="bg-white rounded-lg shadow p-3 border-2 border-yellow-600">
+            <div className="bg-gray-200 h-24 rounded mb-2 flex items-center justify-center">
+              🖼️ 商品B
+            </div>
+            <h3 className="font-bold">商品B</h3>
+            <p className="text-sm text-gray-600">8,000円</p>
+            <button className={`w-full p-2 rounded mt-2 text-sm ${highlight === 'card2-button' ? 'bg-yellow-300 text-gray-900 border-2 border-yellow-600 font-bold' : 'bg-blue-500 text-white'}`}>
+              カートに追加 {highlight === 'card2-button' && '←'}
+            </button>
+          </div>
+          <div className="col-span-2 text-sm text-gray-600 bg-yellow-50 p-2 rounded border-l-4 border-yellow-400">
+            階層: div.card[data-product-id="A002"] → div.card-body → button.btn-cart
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'modal') {
+      return (
+        <div className="relative bg-gray-900 bg-opacity-50 p-8 rounded-lg min-h-64 flex items-center justify-center">
+          <div className="bg-white rounded-lg shadow-2xl w-80 border-2 border-blue-600">
+            <div className="bg-blue-600 text-white p-3 rounded-t-lg flex justify-between items-center">
+              <h3 className="font-bold">確認</h3>
+              <button className="text-2xl">×</button>
+            </div>
+            <div className="p-4">
+              <p>本当に削除しますか？</p>
+            </div>
+            <div className="p-3 bg-gray-50 rounded-b-lg flex gap-2 justify-end">
+              <button className="px-4 py-2 bg-gray-300 rounded">
+                キャンセル
+              </button>
+              <button className={`px-4 py-2 rounded ${highlight === 'confirm-button' ? 'bg-yellow-300 text-gray-900 border-2 border-yellow-600 font-bold' : 'bg-red-600 text-white'}`}>
+                削除する {highlight === 'confirm-button' && '←'}
+              </button>
+            </div>
+          </div>
+          <div className="absolute bottom-2 left-2 right-2 text-sm text-white bg-black bg-opacity-70 p-2 rounded">
+            階層: div#confirm-modal → div.modal-footer → button.btn-confirm
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'infinite-scroll') {
+      return (
+        <div className="bg-white rounded-lg border-2 border-gray-300 h-64 overflow-y-auto">
+          <div className="p-2 space-y-1">
+            <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+              <span>アイテム 1</span>
+              <button className="px-3 py-1 bg-blue-500 text-white rounded text-sm">詳細</button>
+            </div>
+            <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+              <span>アイテム 2</span>
+              <button className="px-3 py-1 bg-blue-500 text-white rounded text-sm">詳細</button>
+            </div>
+            <div className="text-center text-gray-400 py-2">...</div>
+            <div className={`flex justify-between items-center p-2 rounded ${highlight === 'item-50' ? 'bg-yellow-300 border-2 border-yellow-600' : 'bg-gray-50'}`}>
+              <span className="font-bold">アイテム 50</span>
+              <button className="px-3 py-1 bg-blue-500 text-white rounded text-sm font-bold">
+                詳細 {highlight === 'item-50' && '←'}
+              </button>
+            </div>
+          </div>
+          <div className="sticky bottom-0 text-sm text-gray-600 bg-yellow-50 p-2 border-t-2 border-yellow-400">
+            階層: div#infinite-scroll → div.item[data-index="50"] → button.item-action
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  const current = patterns[activePattern];
+
+  return (
+    <div className="w-full max-w-7xl mx-auto p-6 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 min-h-screen">
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold text-gray-800 mb-2 flex items-center gap-3">
+          <Layout className="text-indigo-600" size={40} />
+          Selenium 要素指定パターン完全比較
+        </h1>
+        <p className="text-gray-600 text-lg">
+          HTML階層 × XPath × CSSセレクタ × 座標指定の4パターンで図解
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+        {patterns.map((pattern, index) => (
+          <button
+            key={index}
+            onClick={() => setActivePattern(index)}
+            className={`p-4 rounded-lg border-2 transition-all text-left ${
+              activePattern === index
+                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-700 shadow-lg'
+                : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400'
+            }`}
+          >
+            <div className="font-bold text-sm">{pattern.title}</div>
+            <div className={`text-xs mt-1 ${activePattern === index ? 'text-indigo-100' : 'text-gray-500'}`}>
+              {pattern.target}
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-6">
+        <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-indigo-200">
+          <div className="flex items-center gap-2 mb-4">
+            <Map className="text-indigo-600" size={24} />
+            <h2 className="text-2xl font-bold text-gray-800">ビジュアル図解</h2>
+          </div>
+          <VisualDemo visual={current.visual} />
+        </div>
+
+        <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-purple-200">
+          <div className="flex items-center gap-2 mb-4">
+            <Code className="text-purple-600" size={24} />
+            <h2 className="text-2xl font-bold text-gray-800">HTML構造</h2>
+          </div>
+          <pre className="bg-gray-900 text-green-300 p-4 rounded-lg text-sm overflow-x-auto font-mono">
+            <code>{current.html}</code>
+          </pre>
+          <div className="mt-3 p-3 bg-purple-50 rounded-lg border-l-4 border-purple-500">
+            <strong className="text-purple-800">ターゲット:</strong>
+            <span className="text-gray-700 ml-2">{current.target}</span>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-orange-200">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="bg-orange-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">
+                1
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">XPath指定</h3>
+            </div>
+            <pre className="bg-orange-900 text-orange-100 p-4 rounded-lg text-sm overflow-x-auto font-mono">
+              <code>{current.xpath}</code>
+            </pre>
+            <div className="mt-3 p-3 bg-orange-50 rounded text-sm">
+              <strong className="text-orange-700">特徴:</strong>
+              <ul className="mt-1 space-y-1 text-gray-700">
+                <li>• 複雑な階層も柔軟に指定可能</li>
+                <li>• テキスト検索が可能</li>
+                <li>• 親要素への参照が可能</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-blue-200">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">
+                2
+           ーーーー
+
+Selenium 要素指定パターン完全比較
+HTML階層 × XPath × CSSセレクタ × 座標指定の4パターンで図解
+
+
+ネストされたメニュー構造
+「電子機器」リンクをクリック
+
+テーブルの特定セル
+ID:102 の価格セルを取得
+
+フォーム内の入力フィールド
+パスワード入力欄に入力
+
+カード型レイアウト
+商品Bのカートボタンをクリック
+
+モーダルダイアログ
+削除ボタンをクリック
+
+動的リスト（無限スクロール）
+50番目のアイテムの詳細ボタン
+ビジュアル図解
+ユーザー名
+名前を入力
+パスワード
+パスワードを入力
+← ターゲット
+ログイン
+階層: div#login-form → div.form-group[2] → input[type="password"]
+HTML構造
+<div id="login-form" class="form-container">
+  <div class="form-group">
+    <label for="username">ユーザー名</label>
+    <input type="text" 
+           id="username" 
+           name="user" 
+           class="form-control"
+           placeholder="名前を入力"/>
+  </div>
+  <div class="form-group">
+    <label for="password">パスワード</label>
+    <input type="password" 
+           id="password" 
+           name="pass" 
+           class="form-control"
+           placeholder="パスワードを入力"/>
+  </div>
+  <button type="submit" class="btn-primary">
+    ログイン
+  </button>
+</div>
+ターゲット:パスワード入力欄に入力
+1
+XPath指定
+//div[@id="login-form"]//input[@type="password"]
+特徴:
+• 複雑な階層も柔軟に指定可能
+• テキスト検索が可能
+• 親要素への参照が可能
+2
+CSSセレクタ指定
+#login-form input[type="password"]
+特徴:
+• シンプルで読みやすい
+• 実行速度が速い
+• Webデザイナーに馴染みやすい
+座標指定
+方法:form-field
+form = driver.find_element(By.ID, "login-form")
+form_groups = form.find_elements(By.CLASS_NAME, "form-group")
+
+# 2番目のform-group（パスワード）
+password_group = form_groups[1]
+input_field = password_group.find_element(By.TAG_NAME, "input")
+
+# 入力フィールドの中央をクリック
+actions = ActionChains(driver)
+actions.move_to_element(input_field).click().perform()
+input_field.send_keys("password123")
+特徴:
+• DOM構造に依存しない
+• キャンバスや画像の操作に有効
+• 画面サイズの変更に注意が必要
+使い分けのポイント
+XPathを使う場合
+テキスト検索、親要素参照、複雑な条件が必要な時
+
+CSSセレクタを使う場合
+シンプルな階層構造で高速に要素を取得したい時
+
+座標指定を使う場合
+キャンバス操作、画像の特定位置クリックなど
+
+推奨される順序
+CSS → XPath → 座標（最終手段）の順で検討
+
+ーーー
+
+Selenium 要素指定パターン完全比較
+HTML階層 × XPath × CSSセレクタ × 座標指定の4パターンで図解
+
+
+ネストされたメニュー構造
+「電子機器」リンクをクリック
+
+テーブルの特定セル
+ID:102 の価格セルを取得
+
+フォーム内の入力フィールド
+パスワード入力欄に入力
+
+カード型レイアウト
+商品Bのカートボタンをクリック
+
+モーダルダイアログ
+削除ボタンをクリック
+
+動的リスト（無限スクロール）
+50番目のアイテムの詳細ボタン
+ビジュアル図解
+確認
+×
+本当に削除しますか？
+
+キャンセル
+削除する ←
+階層: div#confirm-modal → div.modal-footer → button.btn-confirm
+HTML構造
+<div class="overlay" style="display:block">
+  <div class="modal" id="confirm-modal">
+    <div class="modal-header">
+      <h2>確認</h2>
+      <button class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+      <p>本当に削除しますか？</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel">
+        キャンセル
+      </button>
+      <button class="btn btn-confirm">
+        削除する
+      </button>
+    </div>
+  </div>
+</div>
+ターゲット:削除ボタンをクリック
+1
+XPath指定
+//div[@id="confirm-modal"]//div[@class="modal-footer"]/button[@class="btn btn-confirm"]
+特徴:
+• 複雑な階層も柔軟に指定可能
+• テキスト検索が可能
+• 親要素への参照が可能
+2
+CSSセレクタ指定
+#confirm-modal .modal-footer .btn-confirm
+特徴:
+• シンプルで読みやすい
+• 実行速度が速い
+• Webデザイナーに馴染みやすい
+座標指定
+方法:modal-position
+# モーダルが表示されるまで待機
+modal = WebDriverWait(driver, 10).until(
+    EC.visibility_of_element_located(
+        (By.ID, "confirm-modal")
+    )
+)
+
+# モーダル内のボタンを相対位置で取得
+footer = modal.find_element(By.CLASS_NAME, "modal-footer")
+buttons = footer.find_elements(By.CLASS_NAME, "btn")
+
+# 2番目のボタン（削除する）
+confirm_btn = buttons[1]
+
+# 座標計算
+modal_loc = modal.location
+btn_loc = confirm_btn.location
+
+# モーダル基準の相対座標
+relative_x = btn_loc['x'] - modal_loc['x']
+relative_y = btn_loc['y'] - modal_loc['y']
+特徴:
+• DOM構造に依存しない
+• キャンバスや画像の操作に有効
+• 画面サイズの変更に注意が必要
+使い分けのポイント
+XPathを使う場合
+テキスト検索、親要素参照、複雑な条件が必要な時
+
+CSSセレクタを使う場合
+シンプルな階層構造で高速に要素を取得したい時
+
+座標指定を使う場合
+キャンバス操作、画像の特定位置クリックなど
+
+推奨される順序
+CSS → XPath → 座標（最終手段）の順で検討
+
+ーーーー
+import React, { useState } from 'react';
+import { Code, Map, MousePointer, Layout, Lightbulb } from 'lucide-react';
+
+const SeleniumPatternComparison = () => {
+  const [activePattern, setActivePattern] = useState(0);
+
+  const patterns = [
+    {
+      title: 'ネストされたメニュー構造',
+      html: `<nav id="main-menu">
+  <ul class="menu-list">
+    <li class="menu-item">
+      <a href="/home">ホーム</a>
+    </li>
+    <li class="menu-item dropdown">
+      <a href="/products">製品</a>
+      <ul class="submenu">
+        <li><a href="/electronics">電子機器</a></li>
+        <li><a href="/furniture">家具</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>`,
+      target: '「電子機器」リンクをクリック',
+      xpath: '//nav[@id="main-menu"]//ul[@class="submenu"]/li[1]/a',
+      css: '#main-menu .submenu li:first-child a',
+      coordinates: `menu = driver.find_element(By.ID, "main-menu")
+submenu = menu.find_element(By.CLASS_NAME, "submenu")
+location = submenu.location
+size = submenu.size
+
+# サブメニュー内の最初のリンクの位置を計算
+target_x = location['x'] + 20
+target_y = location['y'] + 15
+
+actions = ActionChains(driver)
+actions.move_by_offset(target_x, target_y).click().perform()`,
+      coordMethod: 'relative',
+      visual: {
+        type: 'nested-menu',
+        highlight: 'submenu-first'
+      }
+    },
+    {
+      title: 'テーブルの特定セル',
+      html: `<table id="data-table" class="table">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>名前</th>
+      <th>価格</th>
+      <th>在庫</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="row" data-id="101">
+      <td>101</td>
+      <td>ノートPC</td>
+      <td class="price">98,000円</td>
+      <td class="stock">5</td>
+    </tr>
+    <tr class="row" data-id="102">
+      <td>102</td>
+      <td>マウス</td>
+      <td class="price">2,500円</td>
+      <td class="stock">20</td>
+    </tr>
+  </tbody>
+</table>`,
+      target: 'ID:102 の価格セルを取得',
+      xpath: '//table[@id="data-table"]//tr[@data-id="102"]/td[@class="price"]',
+      css: '#data-table tr[data-id="102"] td.price',
+      coordinates: `table = driver.find_element(By.ID, "data-table")
+rows = table.find_elements(By.CSS_SELECTOR, "tbody tr")
+
+# 2行目（インデックス1）の3列目（価格）
+target_row = rows[1]
+cells = target_row.find_elements(By.TAG_NAME, "td")
+price_cell = cells[2]
+
+# セルの座標を取得
+location = price_cell.location
+center_x = location['x'] + price_cell.size['width'] / 2
+center_y = location['y'] + price_cell.size['height'] / 2`,
+      coordMethod: 'cell-position',
+      visual: {
+        type: 'table',
+        highlight: 'row2-col3'
+      }
+    },
+    {
+      title: 'フォーム内の入力フィールド',
+      html: `<div id="login-form" class="form-container">
+  <div class="form-group">
+    <label for="username">ユーザー名</label>
+    <input type="text" 
+           id="username" 
+           name="user" 
+           class="form-control"
+           placeholder="名前を入力"/>
+  </div>
+  <div class="form-group">
+    <label for="password">パスワード</label>
+    <input type="password" 
+           id="password" 
+           name="pass" 
+           class="form-control"
+           placeholder="パスワードを入力"/>
+  </div>
+  <button type="submit" class="btn-primary">
+    ログイン
+  </button>
+</div>`,
+      target: 'パスワード入力欄に入力',
+      xpath: '//div[@id="login-form"]//input[@type="password"]',
+      css: '#login-form input[type="password"]',
+      coordinates: `form = driver.find_element(By.ID, "login-form")
+form_groups = form.find_elements(By.CLASS_NAME, "form-group")
+
+# 2番目のform-group（パスワード）
+password_group = form_groups[1]
+input_field = password_group.find_element(By.TAG_NAME, "input")
+
+# 入力フィールドの中央をクリック
+actions = ActionChains(driver)
+actions.move_to_element(input_field).click().perform()
+input_field.send_keys("password123")`,
+      coordMethod: 'form-field',
+      visual: {
+        type: 'form',
+        highlight: 'password-field'
+      }
+    },
+    {
+      title: 'カード型レイアウト',
+      html: `<div class="container">
+  <div class="card" data-product-id="A001">
+    <img src="product1.jpg" class="card-img"/>
+    <div class="card-body">
+      <h3 class="card-title">商品A</h3>
+      <p class="card-price">5,000円</p>
+      <button class="btn-cart">カートに追加</button>
+    </div>
+  </div>
+  <div class="card" data-product-id="A002">
+    <img src="product2.jpg" class="card-img"/>
+    <div class="card-body">
+      <h3 class="card-title">商品B</h3>
+      <p class="card-price">8,000円</p>
+      <button class="btn-cart">カートに追加</button>
+    </div>
+  </div>
+</div>`,
+      target: '商品Bのカートボタンをクリック',
+      xpath: '//div[@class="card" and @data-product-id="A002"]//button[@class="btn-cart"]',
+      css: '.card[data-product-id="A002"] .btn-cart',
+      coordinates: `cards = driver.find_elements(By.CLASS_NAME, "card")
+
+# 2番目のカード（商品B）
+card_b = cards[1]
+button = card_b.find_element(By.CLASS_NAME, "btn-cart")
+
+# ボタンの位置を取得
+btn_location = button.location
+btn_size = button.size
+
+# ボタン中央の座標
+click_x = btn_location['x'] + btn_size['width'] / 2
+click_y = btn_location['y'] + btn_size['height'] / 2
+
+actions = ActionChains(driver)
+actions.move_by_offset(click_x, click_y).click().perform()`,
+      coordMethod: 'card-layout',
+      visual: {
+        type: 'cards',
+        highlight: 'card2-button'
+      }
+    },
+    {
+      title: 'モーダルダイアログ',
+      html: `<div class="overlay" style="display:block">
+  <div class="modal" id="confirm-modal">
+    <div class="modal-header">
+      <h2>確認</h2>
+      <button class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+      <p>本当に削除しますか？</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel">
+        キャンセル
+      </button>
+      <button class="btn btn-confirm">
+        削除する
+      </button>
+    </div>
+  </div>
+</div>`,
+      target: '削除ボタンをクリック',
+      xpath: '//div[@id="confirm-modal"]//div[@class="modal-footer"]/button[@class="btn btn-confirm"]',
+      css: '#confirm-modal .modal-footer .btn-confirm',
+      coordinates: `# モーダルが表示されるまで待機
+modal = WebDriverWait(driver, 10).until(
+    EC.visibility_of_element_located(
+        (By.ID, "confirm-modal")
+    )
+)
+
+# モーダル内のボタンを相対位置で取得
+footer = modal.find_element(By.CLASS_NAME, "modal-footer")
+buttons = footer.find_elements(By.CLASS_NAME, "btn")
+
+# 2番目のボタン（削除する）
+confirm_btn = buttons[1]
+
+# 座標計算
+modal_loc = modal.location
+btn_loc = confirm_btn.location
+
+# モーダル基準の相対座標
+relative_x = btn_loc['x'] - modal_loc['x']
+relative_y = btn_loc['y'] - modal_loc['y']`,
+      coordMethod: 'modal-position',
+      visual: {
+        type: 'modal',
+        highlight: 'confirm-button'
+      }
+    },
+    {
+      title: '動的リスト（無限スクロール）',
+      html: `<div id="infinite-scroll" class="scroll-container">
+  <div class="item" data-index="1">
+    <span class="item-title">アイテム 1</span>
+    <button class="item-action">詳細</button>
+  </div>
+  <div class="item" data-index="2">
+    <span class="item-title">アイテム 2</span>
+    <button class="item-action">詳細</button>
+  </div>
+  <!-- 動的に追加されるアイテム -->
+  <div class="item" data-index="50">
+    <span class="item-title">アイテム 50</span>
+    <button class="item-action">詳細</button>
+  </div>
+</div>`,
+      target: '50番目のアイテムの詳細ボタン',
+      xpath: '//div[@id="infinite-scroll"]//div[@data-index="50"]/button[@class="item-action"]',
+      css: '#infinite-scroll .item[data-index="50"] .item-action',
+      coordinates: `container = driver.find_element(By.ID, "infinite-scroll")
+
+# 特定のアイテムまでスクロール
+target_item = driver.find_element(
+    By.CSS_SELECTOR, 
+    '.item[data-index="50"]'
+)
+
+# 要素が見えるまでスクロール
+driver.execute_script(
+    "arguments[0].scrollIntoView({block: 'center'});",
+    target_item
+)
+time.sleep(0.5)
+
+# アイテムの詳細ボタンを取得
+button = target_item.find_element(
+    By.CLASS_NAME, 
+    "item-action"
+)
+
+# ボタンの画面上の座標
+location = button.location
+viewport_offset = driver.execute_script(
+    "return arguments[0].getBoundingClientRect();",
+    button
+)
+
+# 実際の表示位置
+visible_x = viewport_offset['x']
+visible_y = viewport_offset['y']`,
+      coordMethod: 'scroll-to-element',
+      visual: {
+        type: 'infinite-scroll',
+        highlight: 'item-50'
+      }
+    }
+  ];
+
+  const VisualDemo = ({ visual }) => {
+    const { type, highlight } = visual;
+
+    if (type === 'nested-menu') {
+      return (
+        <div className="bg-gray-100 p-4 rounded-lg border-2 border-gray-300 min-h-64">
+          <div className="bg-blue-600 text-white p-3 rounded-t-lg font-bold">
+            ナビゲーションメニュー
+          </div>
+          <div className="bg-white p-4 rounded-b-lg">
+            <div className="space-y-2">
+              <div className="p-2 hover:bg-gray-100 rounded">🏠 ホーム</div>
+              <div className="p-2 bg-blue-50 rounded">
+                <div className="font-bold">📦 製品 ▼</div>
+                <div className="ml-6 mt-2 space-y-1">
+                  <div className={`p-2 rounded ${highlight === 'submenu-first' ? 'bg-yellow-300 border-2 border-yellow-600' : 'bg-gray-50'}`}>
+                    💻 電子機器 ← ターゲット
+                  </div>
+                  <div className="p-2 bg-gray-50 rounded">🪑 家具</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 text-sm text-gray-600 bg-yellow-50 p-2 rounded border-l-4 border-yellow-400">
+            階層: nav → ul.menu-list → li.dropdown → ul.submenu → li[1] → a
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'table') {
+      return (
+        <div className="bg-white rounded-lg border-2 border-gray-300 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-blue-600 text-white">
+              <tr>
+                <th className="p-2 border">ID</th>
+                <th className="p-2 border">名前</th>
+                <th className="p-2 border">価格</th>
+                <th className="p-2 border">在庫</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="bg-gray-50">
+                <td className="p-2 border text-center">101</td>
+                <td className="p-2 border">ノートPC</td>
+                <td className="p-2 border text-right">98,000円</td>
+                <td className="p-2 border text-center">5</td>
+              </tr>
+              <tr className="bg-white">
+                <td className="p-2 border text-center">102</td>
+                <td className="p-2 border">マウス</td>
+                <td className={`p-2 border text-right ${highlight === 'row2-col3' ? 'bg-yellow-300 border-2 border-yellow-600 font-bold' : ''}`}>
+                  2,500円 {highlight === 'row2-col3' && '← ターゲット'}
+                </td>
+                <td className="p-2 border text-center">20</td>
+              </tr>
+            </tbody>
+          </table>
+          <div className="p-2 text-sm text-gray-600 bg-yellow-50 border-t-2 border-yellow-400">
+            階層: table#data-table → tbody → tr[data-id="102"] → td.price
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'form') {
+      return (
+        <div className="bg-white p-6 rounded-lg border-2 border-gray-300 max-w-md mx-auto">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-bold mb-1">ユーザー名</label>
+              <input 
+                type="text" 
+                className="w-full p-2 border-2 border-gray-300 rounded" 
+                placeholder="名前を入力"
+                readOnly
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-1">パスワード</label>
+              <input 
+                type="password" 
+                className={`w-full p-2 border-2 rounded ${highlight === 'password-field' ? 'border-yellow-600 bg-yellow-100' : 'border-gray-300'}`}
+                placeholder="パスワードを入力"
+                readOnly
+              />
+              {highlight === 'password-field' && (
+                <div className="text-xs text-yellow-700 mt-1">← ターゲット</div>
+              )}
+            </div>
+            <button className="w-full bg-blue-600 text-white p-2 rounded font-bold">
+              ログイン
+            </button>
+          </div>
+          <div className="mt-4 text-sm text-gray-600 bg-yellow-50 p-2 rounded border-l-4 border-yellow-400">
+            階層: div#login-form → div.form-group[2] → input[type="password"]
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'cards') {
+      return (
+        <div className="grid grid-cols-2 gap-4 p-4 bg-gray-100 rounded-lg border-2 border-gray-300">
+          <div className="bg-white rounded-lg shadow p-3">
+            <div className="bg-gray-200 h-24 rounded mb-2 flex items-center justify-center">
+              🖼️ 商品A
+            </div>
+            <h3 className="font-bold">商品A</h3>
+            <p className="text-sm text-gray-600">5,000円</p>
+            <button className="w-full bg-blue-500 text-white p-2 rounded mt-2 text-sm">
+              カートに追加
+            </button>
+          </div>
+          <div className="bg-white rounded-lg shadow p-3 border-2 border-yellow-600">
+            <div className="bg-gray-200 h-24 rounded mb-2 flex items-center justify-center">
+              🖼️ 商品B
+            </div>
+            <h3 className="font-bold">商品B</h3>
+            <p className="text-sm text-gray-600">8,000円</p>
+            <button className={`w-full p-2 rounded mt-2 text-sm ${highlight === 'card2-button' ? 'bg-yellow-300 text-gray-900 border-2 border-yellow-600 font-bold' : 'bg-blue-500 text-white'}`}>
+              カートに追加 {highlight === 'card2-button' && '←'}
+            </button>
+          </div>
+          <div className="col-span-2 text-sm text-gray-600 bg-yellow-50 p-2 rounded border-l-4 border-yellow-400">
+            階層: div.card[data-product-id="A002"] → div.card-body → button.btn-cart
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'modal') {
+      return (
+        <div className="relative bg-gray-900 bg-opacity-50 p-8 rounded-lg min-h-64 flex items-center justify-center">
+          <div className="bg-white rounded-lg shadow-2xl w-80 border-2 border-blue-600">
+            <div className="bg-blue-600 text-white p-3 rounded-t-lg flex justify-between items-center">
+              <h3 className="font-bold">確認</h3>
+              <button className="text-2xl">×</button>
+            </div>
+            <div className="p-4">
+              <p>本当に削除しますか？</p>
+            </div>
+            <div className="p-3 bg-gray-50 rounded-b-lg flex gap-2 justify-end">
+              <button className="px-4 py-2 bg-gray-300 rounded">
+                キャンセル
+              </button>
+              <button className={`px-4 py-2 rounded ${highlight === 'confirm-button' ? 'bg-yellow-300 text-gray-900 border-2 border-yellow-600 font-bold' : 'bg-red-600 text-white'}`}>
+                削除する {highlight === 'confirm-button' && '←'}
+              </button>
+            </div>
+          </div>
+          <div className="absolute bottom-2 left-2 right-2 text-sm text-white bg-black bg-opacity-70 p-2 rounded">
+            階層: div#confirm-modal → div.modal-footer → button.btn-confirm
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'infinite-scroll') {
+      return (
+        <div className="bg-white rounded-lg border-2 border-gray-300 h-64 overflow-y-auto">
+          <div className="p-2 space-y-1">
+            <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+              <span>アイテム 1</span>
+              <button className="px-3 py-1 bg-blue-500 text-white rounded text-sm">詳細</button>
+            </div>
+            <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+              <span>アイテム 2</span>
+              <button className="px-3 py-1 bg-blue-500 text-white rounded text-sm">詳細</button>
+            </div>
+            <div className="text-center text-gray-400 py-2">...</div>
+            <div className={`flex justify-between items-center p-2 rounded ${highlight === 'item-50' ? 'bg-yellow-300 border-2 border-yellow-600' : 'bg-gray-50'}`}>
+              <span className="font-bold">アイテム 50</span>
+              <button className="px-3 py-1 bg-blue-500 text-white rounded text-sm font-bold">
+                詳細 {highlight === 'item-50' && '←'}
+              </button>
+            </div>
+          </div>
+          <div className="sticky bottom-0 text-sm text-gray-600 bg-yellow-50 p-2 border-t-2 border-yellow-400">
+            階層: div#infinite-scroll → div.item[data-index="50"] → button.item-action
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  const current = patterns[activePattern];
+
+  return (
+    <div className="w-full max-w-7xl mx-auto p-6 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 min-h-screen">
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold text-gray-800 mb-2 flex items-center gap-3">
+          <Layout className="text-indigo-600" size={40} />
+          Selenium 要素指定パターン完全比較
+        </h1>
+        <p className="text-gray-600 text-lg">
+          HTML階層 × XPath × CSSセレクタ × 座標指定の4パターンで図解
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+        {patterns.map((pattern, index) => (
+          <button
+            key={index}
+            onClick={() => setActivePattern(index)}
+            className={`p-4 rounded-lg border-2 transition-all text-left ${
+              activePattern === index
+                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-700 shadow-lg'
+                : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400'
+            }`}
+          >
+            <div className="font-bold text-sm">{pattern.title}</div>
+            <div className={`text-xs mt-1 ${activePattern === index ? 'text-indigo-100' : 'text-gray-500'}`}>
+              {pattern.target}
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-6">
+        <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-indigo-200">
+          <div className="flex items-center gap-2 mb-4">
+            <Map className="text-indigo-600" size={24} />
+            <h2 className="text-2xl font-bold text-gray-800">ビジュアル図解</h2>
+          </div>
+          <VisualDemo visual={current.visual} />
+        </div>
+
+        <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-purple-200">
+          <div className="flex items-center gap-2 mb-4">
+            <Code className="text-purple-600" size={24} />
+            <h2 className="text-2xl font-bold text-gray-800">HTML構造</h2>
+          </div>
+          <pre className="bg-gray-900 text-green-300 p-4 rounded-lg text-sm overflow-x-auto font-mono">
+            <code>{current.html}</code>
+          </pre>
+          <div className="mt-3 p-3 bg-purple-50 rounded-lg border-l-4 border-purple-500">
+            <strong className="text-purple-800">ターゲット:</strong>
+            <span className="text-gray-700 ml-2">{current.target}</span>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-orange-200">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="bg-orange-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">
+                1
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">XPath指定</h3>
+            </div>
+            <pre className="bg-orange-900 text-orange-100 p-4 rounded-lg text-sm overflow-x-auto font-mono">
+              <code>{current.xpath}</code>
+            </pre>
+            <div className="mt-3 p-3 bg-orange-50 rounded text-sm">
+              <strong className="text-orange-700">特徴:</strong>
+              <ul className="mt-1 space-y-1 text-gray-700">
+                <li>• 複雑な階層も柔軟に指定可能</li>
+                <li>• テキスト検索が可能</li>
+                <li>• 親要素への参照が可能</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-blue-200">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">
+                2
+
+
+ーーーーー
+import React, { useState } from 'react';
+import { Code, Map, MousePointer, Layout, Lightbulb } from 'lucide-react';
+
+const SeleniumPatternComparison = () => {
+  const [activePattern, setActivePattern] = useState(0);
+
+  const patterns = [
+    {
+      title: 'ネストされたメニュー構造',
+      html: `<nav id="main-menu">
+  <ul class="menu-list">
+    <li class="menu-item">
+      <a href="/home">ホーム</a>
+    </li>
+    <li class="menu-item dropdown">
+      <a href="/products">製品</a>
+      <ul class="submenu">
+        <li><a href="/electronics">電子機器</a></li>
+        <li><a href="/furniture">家具</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>`,
+      target: '「電子機器」リンクをクリック',
+      xpath: '//nav[@id="main-menu"]//ul[@class="submenu"]/li[1]/a',
+      css: '#main-menu .submenu li:first-child a',
+      coordinates: `menu = driver.find_element(By.ID, "main-menu")
+submenu = menu.find_element(By.CLASS_NAME, "submenu")
+location = submenu.location
+size = submenu.size
+
+# サブメニュー内の最初のリンクの位置を計算
+target_x = location['x'] + 20
+target_y = location['y'] + 15
+
+actions = ActionChains(driver)
+actions.move_by_offset(target_x, target_y).click().perform()`,
+      coordMethod: 'relative',
+      visual: {
+        type: 'nested-menu',
+        highlight: 'submenu-first'
+      }
+    },
+    {
+      title: 'テーブルの特定セル',
+      html: `<table id="data-table" class="table">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>名前</th>
+      <th>価格</th>
+      <th>在庫</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="row" data-id="101">
+      <td>101</td>
+      <td>ノートPC</td>
+      <td class="price">98,000円</td>
+      <td class="stock">5</td>
+    </tr>
+    <tr class="row" data-id="102">
+      <td>102</td>
+      <td>マウス</td>
+      <td class="price">2,500円</td>
+      <td class="stock">20</td>
+    </tr>
+  </tbody>
+</table>`,
+      target: 'ID:102 の価格セルを取得',
+      xpath: '//table[@id="data-table"]//tr[@data-id="102"]/td[@class="price"]',
+      css: '#data-table tr[data-id="102"] td.price',
+      coordinates: `table = driver.find_element(By.ID, "data-table")
+rows = table.find_elements(By.CSS_SELECTOR, "tbody tr")
+
+# 2行目（インデックス1）の3列目（価格）
+target_row = rows[1]
+cells = target_row.find_elements(By.TAG_NAME, "td")
+price_cell = cells[2]
+
+# セルの座標を取得
+location = price_cell.location
+center_x = location['x'] + price_cell.size['width'] / 2
+center_y = location['y'] + price_cell.size['height'] / 2`,
+      coordMethod: 'cell-position',
+      visual: {
+        type: 'table',
+        highlight: 'row2-col3'
+      }
+    },
+    {
+      title: 'フォーム内の入力フィールド',
+      html: `<div id="login-form" class="form-container">
+  <div class="form-group">
+    <label for="username">ユーザー名</label>
+    <input type="text" 
+           id="username" 
+           name="user" 
+           class="form-control"
+           placeholder="名前を入力"/>
+  </div>
+  <div class="form-group">
+    <label for="password">パスワード</label>
+    <input type="password" 
+           id="password" 
+           name="pass" 
+           class="form-control"
+           placeholder="パスワードを入力"/>
+  </div>
+  <button type="submit" class="btn-primary">
+    ログイン
+  </button>
+</div>`,
+      target: 'パスワード入力欄に入力',
+      xpath: '//div[@id="login-form"]//input[@type="password"]',
+      css: '#login-form input[type="password"]',
+      coordinates: `form = driver.find_element(By.ID, "login-form")
+form_groups = form.find_elements(By.CLASS_NAME, "form-group")
+
+# 2番目のform-group（パスワード）
+password_group = form_groups[1]
+input_field = password_group.find_element(By.TAG_NAME, "input")
+
+# 入力フィールドの中央をクリック
+actions = ActionChains(driver)
+actions.move_to_element(input_field).click().perform()
+input_field.send_keys("password123")`,
+      coordMethod: 'form-field',
+      visual: {
+        type: 'form',
+        highlight: 'password-field'
+      }
+    },
+    {
+      title: 'カード型レイアウト',
+      html: `<div class="container">
+  <div class="card" data-product-id="A001">
+    <img src="product1.jpg" class="card-img"/>
+    <div class="card-body">
+      <h3 class="card-title">商品A</h3>
+      <p class="card-price">5,000円</p>
+      <button class="btn-cart">カートに追加</button>
+    </div>
+  </div>
+  <div class="card" data-product-id="A002">
+    <img src="product2.jpg" class="card-img"/>
+    <div class="card-body">
+      <h3 class="card-title">商品B</h3>
+      <p class="card-price">8,000円</p>
+      <button class="btn-cart">カートに追加</button>
+    </div>
+  </div>
+</div>`,
+      target: '商品Bのカートボタンをクリック',
+      xpath: '//div[@class="card" and @data-product-id="A002"]//button[@class="btn-cart"]',
+      css: '.card[data-product-id="A002"] .btn-cart',
+      coordinates: `cards = driver.find_elements(By.CLASS_NAME, "card")
+
+# 2番目のカード（商品B）
+card_b = cards[1]
+button = card_b.find_element(By.CLASS_NAME, "btn-cart")
+
+# ボタンの位置を取得
+btn_location = button.location
+btn_size = button.size
+
+# ボタン中央の座標
+click_x = btn_location['x'] + btn_size['width'] / 2
+click_y = btn_location['y'] + btn_size['height'] / 2
+
+actions = ActionChains(driver)
+actions.move_by_offset(click_x, click_y).click().perform()`,
+      coordMethod: 'card-layout',
+      visual: {
+        type: 'cards',
+        highlight: 'card2-button'
+      }
+    },
+    {
+      title: 'モーダルダイアログ',
+      html: `<div class="overlay" style="display:block">
+  <div class="modal" id="confirm-modal">
+    <div class="modal-header">
+      <h2>確認</h2>
+      <button class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+      <p>本当に削除しますか？</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel">
+        キャンセル
+      </button>
+      <button class="btn btn-confirm">
+        削除する
+      </button>
+    </div>
+  </div>
+</div>`,
+      target: '削除ボタンをクリック',
+      xpath: '//div[@id="confirm-modal"]//div[@class="modal-footer"]/button[@class="btn btn-confirm"]',
+      css: '#confirm-modal .modal-footer .btn-confirm',
+      coordinates: `# モーダルが表示されるまで待機
+modal = WebDriverWait(driver, 10).until(
+    EC.visibility_of_element_located(
+        (By.ID, "confirm-modal")
+    )
+)
+
+# モーダル内のボタンを相対位置で取得
+footer = modal.find_element(By.CLASS_NAME, "modal-footer")
+buttons = footer.find_elements(By.CLASS_NAME, "btn")
+
+# 2番目のボタン（削除する）
+confirm_btn = buttons[1]
+
+# 座標計算
+modal_loc = modal.location
+btn_loc = confirm_btn.location
+
+# モーダル基準の相対座標
+relative_x = btn_loc['x'] - modal_loc['x']
+relative_y = btn_loc['y'] - modal_loc['y']`,
+      coordMethod: 'modal-position',
+      visual: {
+        type: 'modal',
+        highlight: 'confirm-button'
+      }
+    },
+    {
+      title: '動的リスト（無限スクロール）',
+      html: `<div id="infinite-scroll" class="scroll-container">
+  <div class="item" data-index="1">
+    <span class="item-title">アイテム 1</span>
+    <button class="item-action">詳細</button>
+  </div>
+  <div class="item" data-index="2">
+    <span class="item-title">アイテム 2</span>
+    <button class="item-action">詳細</button>
+  </div>
+  <!-- 動的に追加されるアイテム -->
+  <div class="item" data-index="50">
+    <span class="item-title">アイテム 50</span>
+    <button class="item-action">詳細</button>
+  </div>
+</div>`,
+      target: '50番目のアイテムの詳細ボタン',
+      xpath: '//div[@id="infinite-scroll"]//div[@data-index="50"]/button[@class="item-action"]',
+      css: '#infinite-scroll .item[data-index="50"] .item-action',
+      coordinates: `container = driver.find_element(By.ID, "infinite-scroll")
+
+# 特定のアイテムまでスクロール
+target_item = driver.find_element(
+    By.CSS_SELECTOR, 
+    '.item[data-index="50"]'
+)
+
+# 要素が見えるまでスクロール
+driver.execute_script(
+    "arguments[0].scrollIntoView({block: 'center'});",
+    target_item
+)
+time.sleep(0.5)
+
+# アイテムの詳細ボタンを取得
+button = target_item.find_element(
+    By.CLASS_NAME, 
+    "item-action"
+)
+
+# ボタンの画面上の座標
+location = button.location
+viewport_offset = driver.execute_script(
+    "return arguments[0].getBoundingClientRect();",
+    button
+)
+
+# 実際の表示位置
+visible_x = viewport_offset['x']
+visible_y = viewport_offset['y']`,
+      coordMethod: 'scroll-to-element',
+      visual: {
+        type: 'infinite-scroll',
+        highlight: 'item-50'
+      }
+    }
+  ];
+
+  const VisualDemo = ({ visual }) => {
+    const { type, highlight } = visual;
+
+    if (type === 'nested-menu') {
+      return (
+        <div className="bg-gray-100 p-4 rounded-lg border-2 border-gray-300 min-h-64">
+          <div className="bg-blue-600 text-white p-3 rounded-t-lg font-bold">
+            ナビゲーションメニュー
+          </div>
+          <div className="bg-white p-4 rounded-b-lg">
+            <div className="space-y-2">
+              <div className="p-2 hover:bg-gray-100 rounded">🏠 ホーム</div>
+              <div className="p-2 bg-blue-50 rounded">
+                <div className="font-bold">📦 製品 ▼</div>
+                <div className="ml-6 mt-2 space-y-1">
+                  <div className={`p-2 rounded ${highlight === 'submenu-first' ? 'bg-yellow-300 border-2 border-yellow-600' : 'bg-gray-50'}`}>
+                    💻 電子機器 ← ターゲット
+                  </div>
+                  <div className="p-2 bg-gray-50 rounded">🪑 家具</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 text-sm text-gray-600 bg-yellow-50 p-2 rounded border-l-4 border-yellow-400">
+            階層: nav → ul.menu-list → li.dropdown → ul.submenu → li[1] → a
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'table') {
+      return (
+        <div className="bg-white rounded-lg border-2 border-gray-300 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-blue-600 text-white">
+              <tr>
+                <th className="p-2 border">ID</th>
+                <th className="p-2 border">名前</th>
+                <th className="p-2 border">価格</th>
+                <th className="p-2 border">在庫</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="bg-gray-50">
+                <td className="p-2 border text-center">101</td>
+                <td className="p-2 border">ノートPC</td>
+                <td className="p-2 border text-right">98,000円</td>
+                <td className="p-2 border text-center">5</td>
+              </tr>
+              <tr className="bg-white">
+                <td className="p-2 border text-center">102</td>
+                <td className="p-2 border">マウス</td>
+                <td className={`p-2 border text-right ${highlight === 'row2-col3' ? 'bg-yellow-300 border-2 border-yellow-600 font-bold' : ''}`}>
+                  2,500円 {highlight === 'row2-col3' && '← ターゲット'}
+                </td>
+                <td className="p-2 border text-center">20</td>
+              </tr>
+            </tbody>
+          </table>
+          <div className="p-2 text-sm text-gray-600 bg-yellow-50 border-t-2 border-yellow-400">
+            階層: table#data-table → tbody → tr[data-id="102"] → td.price
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'form') {
+      return (
+        <div className="bg-white p-6 rounded-lg border-2 border-gray-300 max-w-md mx-auto">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-bold mb-1">ユーザー名</label>
+              <input 
+                type="text" 
+                className="w-full p-2 border-2 border-gray-300 rounded" 
+                placeholder="名前を入力"
+                readOnly
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-1">パスワード</label>
+              <input 
+                type="password" 
+                className={`w-full p-2 border-2 rounded ${highlight === 'password-field' ? 'border-yellow-600 bg-yellow-100' : 'border-gray-300'}`}
+                placeholder="パスワードを入力"
+                readOnly
+              />
+              {highlight === 'password-field' && (
+                <div className="text-xs text-yellow-700 mt-1">← ターゲット</div>
+              )}
+            </div>
+            <button className="w-full bg-blue-600 text-white p-2 rounded font-bold">
+              ログイン
+            </button>
+          </div>
+          <div className="mt-4 text-sm text-gray-600 bg-yellow-50 p-2 rounded border-l-4 border-yellow-400">
+            階層: div#login-form → div.form-group[2] → input[type="password"]
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'cards') {
+      return (
+        <div className="grid grid-cols-2 gap-4 p-4 bg-gray-100 rounded-lg border-2 border-gray-300">
+          <div className="bg-white rounded-lg shadow p-3">
+            <div className="bg-gray-200 h-24 rounded mb-2 flex items-center justify-center">
+              🖼️ 商品A
+            </div>
+            <h3 className="font-bold">商品A</h3>
+            <p className="text-sm text-gray-600">5,000円</p>
+            <button className="w-full bg-blue-500 text-white p-2 rounded mt-2 text-sm">
+              カートに追加
+            </button>
+          </div>
+          <div className="bg-white rounded-lg shadow p-3 border-2 border-yellow-600">
+            <div className="bg-gray-200 h-24 rounded mb-2 flex items-center justify-center">
+              🖼️ 商品B
+            </div>
+            <h3 className="font-bold">商品B</h3>
+            <p className="text-sm text-gray-600">8,000円</p>
+            <button className={`w-full p-2 rounded mt-2 text-sm ${highlight === 'card2-button' ? 'bg-yellow-300 text-gray-900 border-2 border-yellow-600 font-bold' : 'bg-blue-500 text-white'}`}>
+              カートに追加 {highlight === 'card2-button' && '←'}
+            </button>
+          </div>
+          <div className="col-span-2 text-sm text-gray-600 bg-yellow-50 p-2 rounded border-l-4 border-yellow-400">
+            階層: div.card[data-product-id="A002"] → div.card-body → button.btn-cart
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'modal') {
+      return (
+        <div className="relative bg-gray-900 bg-opacity-50 p-8 rounded-lg min-h-64 flex items-center justify-center">
+          <div className="bg-white rounded-lg shadow-2xl w-80 border-2 border-blue-600">
+            <div className="bg-blue-600 text-white p-3 rounded-t-lg flex justify-between items-center">
+              <h3 className="font-bold">確認</h3>
+              <button className="text-2xl">×</button>
+            </div>
+            <div className="p-4">
+              <p>本当に削除しますか？</p>
+            </div>
+            <div className="p-3 bg-gray-50 rounded-b-lg flex gap-2 justify-end">
+              <button className="px-4 py-2 bg-gray-300 rounded">
+                キャンセル
+              </button>
+              <button className={`px-4 py-2 rounded ${highlight === 'confirm-button' ? 'bg-yellow-300 text-gray-900 border-2 border-yellow-600 font-bold' : 'bg-red-600 text-white'}`}>
+                削除する {highlight === 'confirm-button' && '←'}
+              </button>
+            </div>
+          </div>
+          <div className="absolute bottom-2 left-2 right-2 text-sm text-white bg-black bg-opacity-70 p-2 rounded">
+            階層: div#confirm-modal → div.modal-footer → button.btn-confirm
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'infinite-scroll') {
+      return (
+        <div className="bg-white rounded-lg border-2 border-gray-300 h-64 overflow-y-auto">
+          <div className="p-2 space-y-1">
+            <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+              <span>アイテム 1</span>
+              <button className="px-3 py-1 bg-blue-500 text-white rounded text-sm">詳細</button>
+            </div>
+            <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+              <span>アイテム 2</span>
+              <button className="px-3 py-1 bg-blue-500 text-white rounded text-sm">詳細</button>
+            </div>
+            <div className="text-center text-gray-400 py-2">...</div>
+            <div className={`flex justify-between items-center p-2 rounded ${highlight === 'item-50' ? 'bg-yellow-300 border-2 border-yellow-600' : 'bg-gray-50'}`}>
+              <span className="font-bold">アイテム 50</span>
+              <button className="px-3 py-1 bg-blue-500 text-white rounded text-sm font-bold">
+                詳細 {highlight === 'item-50' && '←'}
+              </button>
+            </div>
+          </div>
+          <div className="sticky bottom-0 text-sm text-gray-600 bg-yellow-50 p-2 border-t-2 border-yellow-400">
+            階層: div#infinite-scroll → div.item[data-index="50"] → button.item-action
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  const current = patterns[activePattern];
+
+  return (
+    <div className="w-full max-w-7xl mx-auto p-6 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 min-h-screen">
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold text-gray-800 mb-2 flex items-center gap-3">
+          <Layout className="text-indigo-600" size={40} />
+          Selenium 要素指定パターン完全比較
+        </h1>
+        <p className="text-gray-600 text-lg">
+          HTML階層 × XPath × CSSセレクタ × 座標指定の4パターンで図解
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+        {patterns.map((pattern, index) => (
+          <button
+            key={index}
+            onClick={() => setActivePattern(index)}
+            className={`p-4 rounded-lg border-2 transition-all text-left ${
+              activePattern === index
+                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-700 shadow-lg'
+                : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400'
+            }`}
+          >
+            <div className="font-bold text-sm">{pattern.title}</div>
+            <div className={`text-xs mt-1 ${activePattern === index ? 'text-indigo-100' : 'text-gray-500'}`}>
+              {pattern.target}
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-6">
+        <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-indigo-200">
+          <div className="flex items-center gap-2 mb-4">
+            <Map className="text-indigo-600" size={24} />
+            <h2 className="text-2xl font-bold text-gray-800">ビジュアル図解</h2>
+          </div>
+          <VisualDemo visual={current.visual} />
+        </div>
+
+        <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-purple-200">
+          <div className="flex items-center gap-2 mb-4">
+            <Code className="text-purple-600" size={24} />
+            <h2 className="text-2xl font-bold text-gray-800">HTML構造</h2>
+          </div>
+          <pre className="bg-gray-900 text-green-300 p-4 rounded-lg text-sm overflow-x-auto font-mono">
+            <code>{current.html}</code>
+          </pre>
+          <div className="mt-3 p-3 bg-purple-50 rounded-lg border-l-4 border-purple-500">
+            <strong className="text-purple-800">ターゲット:</strong>
+            <span className="text-gray-700 ml-2">{current.target}</span>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-orange-200">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="bg-orange-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">
+                1
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">XPath指定</h3>
+            </div>
+            <pre className="bg-orange-900 text-orange-100 p-4 rounded-lg text-sm overflow-x-auto font-mono">
+              <code>{current.xpath}</code>
+            </pre>
+            <div className="mt-3 p-3 bg-orange-50 rounded text-sm">
+              <strong className="text-orange-700">特徴:</strong>
+              <ul className="mt-1 space-y-1 text-gray-700">
+                <li>• 複雑な階層も柔軟に指定可能</li>
+                <li>• テキスト検索が可能</li>
+                <li>• 親要素への参照が可能</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-blue-200">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">
+                2
+
+ーーーーー
+
+Selenium 要素指定パターン完全比較
+HTML階層 × XPath × CSSセレクタ × 座標指定の4パターンで図解
+
+
+ネストされたメニュー構造
+「電子機器」リンクをクリック
+
+テーブルの特定セル
+ID:102 の価格セルを取得
+
+フォーム内の入力フィールド
+パスワード入力欄に入力
+
+カード型レイアウト
+商品Bのカートボタンをクリック
+
+モーダルダイアログ
+削除ボタンをクリック
+
+動的リスト（無限スクロール）
+50番目のアイテムの詳細ボタン
+ビジュアル図解
+アイテム 1
+詳細
+アイテム 2
+詳細
+...
+アイテム 50
+詳細 ←
+階層: div#infinite-scroll → div.item[data-index="50"] → button.item-action
+HTML構造
+<div id="infinite-scroll" class="scroll-container">
+  <div class="item" data-index="1">
+    <span class="item-title">アイテム 1</span>
+    <button class="item-action">詳細</button>
+  </div>
+  <div class="item" data-index="2">
+    <span class="item-title">アイテム 2</span>
+    <button class="item-action">詳細</button>
+  </div>
+  <!-- 動的に追加されるアイテム -->
+  <div class="item" data-index="50">
+    <span class="item-title">アイテム 50</span>
+    <button class="item-action">詳細</button>
+  </div>
+</div>
+ターゲット:50番目のアイテムの詳細ボタン
+1
+XPath指定
+//div[@id="infinite-scroll"]//div[@data-index="50"]/button[@class="item-action"]
+特徴:
+• 複雑な階層も柔軟に指定可能
+• テキスト検索が可能
+• 親要素への参照が可能
+2
+CSSセレクタ指定
+#infinite-scroll .item[data-index="50"] .item-action
+特徴:
+• シンプルで読みやすい
+• 実行速度が速い
+• Webデザイナーに馴染みやすい
+座標指定
+方法:scroll-to-element
+container = driver.find_element(By.ID, "infinite-scroll")
+
+# 特定のアイテムまでスクロール
+target_item = driver.find_element(
+    By.CSS_SELECTOR, 
+    '.item[data-index="50"]'
+)
+
+# 要素が見えるまでスクロール
+driver.execute_script(
+    "arguments[0].scrollIntoView({block: 'center'});",
+    target_item
+)
+time.sleep(0.5)
+
+# アイテムの詳細ボタンを取得
+button = target_item.find_element(
+    By.CLASS_NAME, 
+    "item-action"
+)
+
+# ボタンの画面上の座標
+location = button.location
+viewport_offset = driver.execute_script(
+    "return arguments[0].getBoundingClientRect();",
+    button
+)
+
+# 実際の表示位置
+visible_x = viewport_offset['x']
+visible_y = viewport_offset['y']
+特徴:
+• DOM構造に依存しない
+• キャンバスや画像の操作に有効
+• 画面サイズの変更に注意が必要
+使い分けのポイント
+XPathを使う場合
+テキスト検索、親要素参照、複雑な条件が必要な時
+
+CSSセレクタを使う場合
+シンプルな階層構造で高速に要素を取得したい時
+
+座標指定を使う場合
+キャンバス操作、画像の特定位置クリックなど
+
+推奨される順序
+CSS → XPath → 座標（最終手段）の順で検討
