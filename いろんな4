@@ -1,0 +1,1567 @@
+# 新人エンジニア向け研修：Pythonオブジェクト指向プログラミング完全ガイド
+
+## 目次
+1. クラスとインスタンス
+2. メソッドの種類
+3. public/private
+4. 継承（親子関係）
+5. オーバーライド
+6. ポリモーフィズム
+7. オーバーロード
+8. docstring
+9. 仮想環境
+
+---
+
+## 1. クラスとインスタンス
+
+### クラスとは？
+**設計図（型紙）**のようなもの
+
+### インスタンスとは？
+**設計図から作った実体（実物）**
+
+```python
+# クラス定義（設計図）
+class Daifuku:
+    """大福クラス"""
+    
+    def __init__(self, flavor, price):
+        """
+        コンストラクタ（初期化メソッド）
+        
+        Args:
+            flavor (str): 味
+            price (int): 価格
+        """
+        self.flavor = flavor  # インスタンス変数
+        self.price = price
+    
+    def describe(self):
+        """大福の説明を表示"""
+        return f"{self.flavor}大福（{self.price}円）"
+
+
+# インスタンス作成（実物を作る）
+ichigo_daifuku = Daifuku("いちご", 200)  # インスタンス1
+matcha_daifuku = Daifuku("抹茶", 180)    # インスタンス2
+
+# 使用
+print(ichigo_daifuku.describe())  # いちご大福（200円）
+print(matcha_daifuku.describe())  # 抹茶大福（180円）
+```
+
+### インスタンス変数 vs クラス変数
+
+```python
+class DaifukuShop:
+    # クラス変数（全インスタンスで共有）
+    shop_name = "ふわふわ大福店"
+    total_sales = 0
+    
+    def __init__(self, location):
+        # インスタンス変数（各インスタンス固有）
+        self.location = location
+        self.daily_sales = 0
+    
+    def sell(self, amount):
+        """売上を記録"""
+        self.daily_sales += amount
+        DaifukuShop.total_sales += amount  # クラス変数を更新
+
+
+# 使用例
+shop1 = DaifukuShop("東京店")
+shop2 = DaifukuShop("大阪店")
+
+shop1.sell(1000)
+shop2.sell(2000)
+
+print(shop1.daily_sales)        # 1000（インスタンス固有）
+print(shop2.daily_sales)        # 2000（インスタンス固有）
+print(DaifukuShop.total_sales)  # 3000（全店舗の合計）
+```
+
+---
+
+## 2. メソッドの種類
+
+### インスタンスメソッド
+**インスタンスに対して動作**（第1引数は`self`）
+
+### クラスメソッド
+**クラスに対して動作**（第1引数は`cls`）
+
+### 静的メソッド
+**クラスにもインスタンスにも依存しない**（引数制限なし）
+
+```python
+class Daifuku:
+    tax_rate = 0.1  # クラス変数
+    
+    def __init__(self, flavor, price):
+        self.flavor = flavor
+        self.price = price
+    
+    # インスタンスメソッド
+    def get_total_price(self):
+        """税込価格を取得（インスタンスのデータを使う）"""
+        return self.price * (1 + Daifuku.tax_rate)
+    
+    # クラスメソッド
+    @classmethod
+    def change_tax_rate(cls, new_rate):
+        """消費税率を変更（クラス全体に影響）"""
+        cls.tax_rate = new_rate
+    
+    # 静的メソッド
+    @staticmethod
+    def is_valid_price(price):
+        """価格が妥当かチェック（独立した処理）"""
+        return 0 < price < 10000
+
+
+# 使用例
+daifuku = Daifuku("いちご", 200)
+
+# インスタンスメソッド
+print(daifuku.get_total_price())  # 220
+
+# クラスメソッド（インスタンス不要）
+Daifuku.change_tax_rate(0.08)
+print(daifuku.get_total_price())  # 216
+
+# 静的メソッド（インスタンス不要）
+print(Daifuku.is_valid_price(200))   # True
+print(Daifuku.is_valid_price(-100))  # False
+```
+
+---
+
+## 3. public / private
+
+Pythonには**厳密なアクセス制御はない**が、**慣習**がある
+
+### 命名規則
+
+```python
+class Customer:
+    def __init__(self, name, email):
+        # public（公開）- 外部からアクセス可能
+        self.name = name
+        
+        # protected（保護）- サブクラスからアクセス想定
+        self._email = email
+        
+        # private（非公開）- クラス内部のみ
+        self.__password = "secret123"
+    
+    # public メソッド
+    def get_name(self):
+        return self.name
+    
+    # protected メソッド
+    def _validate_email(self):
+        return "@" in self._email
+    
+    # private メソッド
+    def __encrypt_password(self):
+        return f"encrypted_{self.__password}"
+    
+    # public メソッドからprivateメソッドを使う
+    def get_encrypted_password(self):
+        return self.__encrypt_password()
+
+
+# 使用例
+customer = Customer("田中太郎", "tanaka@example.com")
+
+# public - OK
+print(customer.name)  # 田中太郎
+
+# protected - アクセス可能だが、やるべきでない
+print(customer._email)  # tanaka@example.com（警告）
+
+# private - 直接アクセス不可
+# print(customer.__password)  # AttributeError
+
+# publicメソッド経由でアクセス
+print(customer.get_encrypted_password())  # encrypted_secret123
+```
+
+### Name Mangling（名前修飾）
+
+```python
+class Example:
+    def __init__(self):
+        self.__private = "秘密"
+    
+    def show(self):
+        print(self.__private)
+
+
+obj = Example()
+obj.show()  # 秘密
+
+# 直接アクセスは不可
+# print(obj.__private)  # AttributeError
+
+# 実は内部的にはアクセス可能（でもやるべきでない）
+print(obj._Example__private)  # 秘密（名前が変換されている）
+```
+
+### プロパティ（getter/setter）
+
+```python
+class Product:
+    def __init__(self, name, price):
+        self._name = name
+        self._price = price
+    
+    # getter
+    @property
+    def price(self):
+        """価格を取得"""
+        return self._price
+    
+    # setter
+    @price.setter
+    def price(self, value):
+        """価格を設定（バリデーション付き）"""
+        if value < 0:
+            raise ValueError("価格は0以上である必要があります")
+        self._price = value
+    
+    # getter（読み取り専用）
+    @property
+    def name(self):
+        """商品名を取得（読み取り専用）"""
+        return self._name
+
+
+# 使用例
+product = Product("大福", 200)
+
+# getterを使用（メソッドのように見えない）
+print(product.price)  # 200
+print(product.name)   # 大福
+
+# setterを使用
+product.price = 250   # OK
+print(product.price)  # 250
+
+# バリデーション
+# product.price = -100  # ValueError
+
+# 読み取り専用なので変更不可
+# product.name = "新商品"  # AttributeError
+```
+
+---
+
+## 4. 継承（親子関係）
+
+### 基本的な継承
+
+```python
+# 親クラス（基底クラス、スーパークラス）
+class Product:
+    """商品の基底クラス"""
+    
+    def __init__(self, name, price):
+        self.name = name
+        self.price = price
+    
+    def describe(self):
+        """商品説明"""
+        return f"{self.name}: {self.price}円"
+    
+    def calculate_total(self, quantity):
+        """合計金額を計算"""
+        return self.price * quantity
+
+
+# 子クラス（派生クラス、サブクラス）
+class Daifuku(Product):
+    """大福クラス（Productを継承）"""
+    
+    def __init__(self, name, price, flavor):
+        # 親クラスの初期化を呼び出す
+        super().__init__(name, price)
+        # 子クラス独自の属性
+        self.flavor = flavor
+    
+    def describe(self):
+        """商品説明（オーバーライド）"""
+        return f"{self.flavor}{self.name}: {self.price}円"
+
+
+# 使用例
+product = Product("一般商品", 100)
+daifuku = Daifuku("大福", 200, "いちご")
+
+print(product.describe())  # 一般商品: 100円
+print(daifuku.describe())  # いちご大福: 200円
+
+# 継承したメソッドも使える
+print(daifuku.calculate_total(3))  # 600
+```
+
+### 多重継承
+
+```python
+class Discountable:
+    """割引可能な機能"""
+    
+    def apply_discount(self, discount_rate):
+        """割引を適用"""
+        self.price = int(self.price * (1 - discount_rate))
+
+
+class Perishable:
+    """賞味期限がある機能"""
+    
+    def __init__(self, expiry_days):
+        self.expiry_days = expiry_days
+    
+    def is_expired(self, days_passed):
+        """賞味期限切れかチェック"""
+        return days_passed > self.expiry_days
+
+
+# 多重継承
+class FreshDaifuku(Product, Discountable, Perishable):
+    """生大福（割引可能 + 賞味期限あり）"""
+    
+    def __init__(self, name, price, expiry_days):
+        Product.__init__(self, name, price)
+        Perishable.__init__(self, expiry_days)
+
+
+# 使用例
+fresh = FreshDaifuku("生いちご大福", 300, 3)
+
+print(fresh.describe())  # 生いちご大福: 300円
+
+# 割引適用
+fresh.apply_discount(0.2)  # 20%オフ
+print(fresh.price)  # 240
+
+# 賞味期限チェック
+print(fresh.is_expired(2))  # False
+print(fresh.is_expired(5))  # True
+```
+
+### super()の使い方
+
+```python
+class Animal:
+    def __init__(self, name):
+        self.name = name
+        print(f"Animal初期化: {name}")
+    
+    def speak(self):
+        return "何か音を出す"
+
+
+class Dog(Animal):
+    def __init__(self, name, breed):
+        super().__init__(name)  # 親クラスの__init__を呼ぶ
+        self.breed = breed
+        print(f"Dog初期化: {breed}")
+    
+    def speak(self):
+        # 親クラスのメソッドを拡張
+        parent_result = super().speak()
+        return f"{parent_result} → ワンワン！"
+
+
+# 使用例
+dog = Dog("ポチ", "柴犬")
+# 出力:
+# Animal初期化: ポチ
+# Dog初期化: 柴犬
+
+print(dog.speak())  # 何か音を出す → ワンワン！
+```
+
+---
+
+## 5. オーバーライド
+
+**親クラスのメソッドを子クラスで上書き**
+
+```python
+class Employee:
+    """従業員の基底クラス"""
+    
+    def __init__(self, name, base_salary):
+        self.name = name
+        self.base_salary = base_salary
+    
+    def calculate_salary(self):
+        """給与計算"""
+        return self.base_salary
+    
+    def introduce(self):
+        """自己紹介"""
+        return f"私は{self.name}です"
+
+
+class Manager(Employee):
+    """マネージャークラス"""
+    
+    def __init__(self, name, base_salary, bonus):
+        super().__init__(name, base_salary)
+        self.bonus = bonus
+    
+    # オーバーライド
+    def calculate_salary(self):
+        """給与計算（ボーナス込み）"""
+        return self.base_salary + self.bonus
+    
+    # オーバーライド
+    def introduce(self):
+        """自己紹介（肩書き付き）"""
+        base_intro = super().introduce()  # 親のメソッドも使う
+        return f"{base_intro}。マネージャーです。"
+
+
+class Intern(Employee):
+    """インターンクラス"""
+    
+    def __init__(self, name, hourly_rate, hours):
+        # base_salaryは使わない
+        super().__init__(name, 0)
+        self.hourly_rate = hourly_rate
+        self.hours = hours
+    
+    # オーバーライド
+    def calculate_salary(self):
+        """給与計算（時給制）"""
+        return self.hourly_rate * self.hours
+
+
+# 使用例
+employee = Employee("田中", 300000)
+manager = Manager("佐藤", 400000, 100000)
+intern = Intern("鈴木", 1500, 80)
+
+print(employee.calculate_salary())  # 300000
+print(manager.calculate_salary())   # 500000
+print(intern.calculate_salary())    # 120000
+
+print(employee.introduce())  # 私は田中です
+print(manager.introduce())   # 私は佐藤です。マネージャーです。
+```
+
+---
+
+## 6. ポリモーフィズム（多態性）
+
+**同じインターフェースで異なる動作**
+
+```python
+class Animal:
+    """動物の基底クラス"""
+    
+    def speak(self):
+        """鳴き声（サブクラスで実装）"""
+        raise NotImplementedError("サブクラスで実装してください")
+
+
+class Dog(Animal):
+    def speak(self):
+        return "ワンワン！"
+
+
+class Cat(Animal):
+    def speak(self):
+        return "ニャー！"
+
+
+class Cow(Animal):
+    def speak(self):
+        return "モー！"
+
+
+# ポリモーフィズムの威力
+def animal_concert(animals):
+    """
+    動物たちに鳴いてもらう
+    
+    各動物の型を気にせず、同じインターフェース（speak）で扱える
+    """
+    for animal in animals:
+        print(animal.speak())
+
+
+# 使用例
+animals = [
+    Dog(),
+    Cat(),
+    Cow(),
+    Dog(),
+    Cat()
+]
+
+animal_concert(animals)
+# 出力:
+# ワンワン！
+# ニャー！
+# モー！
+# ワンワン！
+# ニャー！
+```
+
+### 実践例：決済システム
+
+```python
+class PaymentMethod:
+    """決済方法の基底クラス"""
+    
+    def pay(self, amount):
+        """支払い処理（サブクラスで実装）"""
+        raise NotImplementedError
+
+
+class CreditCard(PaymentMethod):
+    def __init__(self, card_number):
+        self.card_number = card_number
+    
+    def pay(self, amount):
+        return f"クレジットカード（****{self.card_number[-4:]}）で{amount}円支払いました"
+
+
+class PayPay(PaymentMethod):
+    def __init__(self, phone_number):
+        self.phone_number = phone_number
+    
+    def pay(self, amount):
+        return f"PayPay（{self.phone_number}）で{amount}円支払いました"
+
+
+class Cash(PaymentMethod):
+    def pay(self, amount):
+        return f"現金で{amount}円支払いました"
+
+
+# 決済処理（ポリモーフィズム活用）
+def process_payment(payment_method: PaymentMethod, amount: int):
+    """
+    決済を処理する
+    
+    どの決済方法でも同じインターフェース（pay）で処理できる
+    """
+    result = payment_method.pay(amount)
+    print(result)
+    print("決済完了！")
+
+
+# 使用例
+credit = CreditCard("1234567890123456")
+paypay = PayPay("090-1234-5678")
+cash = Cash()
+
+process_payment(credit, 5000)  # クレジットカードで支払い
+process_payment(paypay, 3000)  # PayPayで支払い
+process_payment(cash, 1000)    # 現金で支払い
+```
+
+---
+
+## 7. オーバーロード
+
+⚠️ **Pythonは従来のオーバーロードをサポートしていない**
+
+他の言語（Java、C++など）のような「同名メソッドで引数違い」はできない
+
+```python
+# これは動かない（最後の定義で上書きされる）
+class Calculator:
+    def add(self, a):
+        return a
+    
+    def add(self, a, b):  # 上の定義を上書き
+        return a + b
+    
+    def add(self, a, b, c):  # さらに上書き
+        return a + b + c
+
+
+calc = Calculator()
+# calc.add(5)  # TypeError（3つ引数が必要）
+```
+
+### 代替手段1: デフォルト引数
+
+```python
+class Calculator:
+    def add(self, a, b=0, c=0):
+        """
+        数値を加算
+        
+        Args:
+            a: 第1引数（必須）
+            b: 第2引数（省略可、デフォルト0）
+            c: 第3引数（省略可、デフォルト0）
+        """
+        return a + b + c
+
+
+calc = Calculator()
+print(calc.add(5))         # 5
+print(calc.add(5, 3))      # 8
+print(calc.add(5, 3, 2))   # 10
+```
+
+### 代替手段2: 可変長引数
+
+```python
+class Calculator:
+    def add(self, *args):
+        """任意個の数値を加算"""
+        return sum(args)
+
+
+calc = Calculator()
+print(calc.add(5))              # 5
+print(calc.add(5, 3))           # 8
+print(calc.add(5, 3, 2))        # 10
+print(calc.add(1, 2, 3, 4, 5))  # 15
+```
+
+### 代替手段3: 型チェック（functools.singledispatchmethod）
+
+```python
+from functools import singledispatchmethod
+
+class Formatter:
+    @singledispatchmethod
+    def format(self, arg):
+        """デフォルト実装"""
+        return str(arg)
+    
+    @format.register
+    def _(self, arg: int):
+        """int用の実装"""
+        return f"整数: {arg}"
+    
+    @format.register
+    def _(self, arg: str):
+        """str用の実装"""
+        return f"文字列: {arg}"
+    
+    @format.register
+    def _(self, arg: list):
+        """list用の実装"""
+        return f"リスト（{len(arg)}要素）: {arg}"
+
+
+formatter = Formatter()
+print(formatter.format(42))          # 整数: 42
+print(formatter.format("Hello"))     # 文字列: Hello
+print(formatter.format([1, 2, 3]))   # リスト（3要素）: [1, 2, 3]
+```
+
+---
+
+## 8. docstring（ドキュメント文字列）
+
+### 基本ルール（PEP 257）
+
+```python
+class Customer:
+    """
+    顧客管理クラス
+    
+    顧客情報の作成、更新、取得を行います。
+    """
+    
+    def __init__(self, name: str, email: str):
+        """
+        顧客を初期化
+        
+        Args:
+            name (str): 顧客名
+            email (str): メールアドレス
+        
+        Raises:
+            ValueError: メールアドレスが無効な場合
+        """
+        if "@" not in email:
+            raise ValueError("無効なメールアドレス")
+        
+        self.name = name
+        self.email = email
+    
+    def send_email(self, subject: str, body: str) -> bool:
+        """
+        顧客にメールを送信
+        
+        Args:
+            subject (str): メールの件名
+            body (str): メール本文
+        
+        Returns:
+            bool: 送信成功したらTrue、失敗したらFalse
+        
+        Examples:
+            >>> customer = Customer("田中", "tanaka@example.com")
+            >>> customer.send_email("ご案内", "新商品のお知らせです")
+            True
+        """
+        # メール送信処理...
+        return True
+
+
+# docstringにアクセス
+print(Customer.__doc__)
+print(Customer.send_email.__doc__)
+
+# help関数で確認
+help(Customer)
+```
+
+### Google Style
+
+```python
+def calculate_discount(price, discount_rate, member_rank="bronze"):
+    """
+    割引後の価格を計算する
+    
+    会員ランクに応じた追加割引を適用します。
+    
+    Args:
+        price (float): 元の価格
+        discount_rate (float): 割引率（0.0～1.0）
+        member_rank (str, optional): 会員ランク。
+            "bronze", "silver", "gold"のいずれか。デフォルトは"bronze"。
+    
+    Returns:
+        float: 割引後の価格
+    
+    Raises:
+        ValueError: discount_rateが0～1の範囲外の場合
+        ValueError: member_rankが不正な値の場合
+    
+    Examples:
+        >>> calculate_discount(1000, 0.1)
+        900.0
+        >>> calculate_discount(1000, 0.1, "gold")
+        850.0
+    
+    Note:
+        会員ランク別の追加割引:
+        - bronze: 追加割引なし
+        - silver: さらに3%オフ
+        - gold: さらに5%オフ
+    """
+    if not 0 <= discount_rate <= 1:
+        raise ValueError("discount_rateは0～1の範囲で指定してください")
+    
+    rank_discount = {
+        "bronze": 0,
+        "silver": 0.03,
+        "gold": 0.05
+    }
+    
+    if member_rank not in rank_discount:
+        raise ValueError(f"不正な会員ランク: {member_rank}")
+    
+    discounted = price * (1 - discount_rate)
+    final_price = discounted * (1 - rank_discount[member_rank])
+    
+    return final_price
+```
+
+### NumPy Style
+
+```python
+def process_order(order_id, items, shipping_address=None):
+    """
+    注文を処理する
+    
+    Parameters
+    ----------
+    order_id : int
+        注文ID
+    items : list of dict
+        注文アイテムのリスト。各アイテムは以下のキーを含む辞書:
+        - 'product_id' (int): 商品ID
+        - 'quantity' (int): 数量
+        - 'price' (float): 単価
+    shipping_address : str, optional
+        配送先住所。Noneの場合は登録住所を使用。
+    
+    Returns
+    -------
+    dict
+        処理結果を含む辞書:
+        - 'success' (bool): 処理成功フラグ
+        - 'total_price' (float): 合計金額
+        - 'estimated_delivery' (str): 配送予定日
+    
+    Raises
+    ------
+    ValueError
+        order_idが無効な場合
+    RuntimeError
+        在庫不足の場合
+    
+    See Also
+    --------
+    cancel_order : 注文をキャンセルする
+    update_order : 注文内容を更新する
+    
+    Examples
+    --------
+    >>> items = [
+    ...     {'product_id': 1, 'quantity': 2, 'price': 500},
+    ...     {'product_id': 2, 'quantity': 1, 'price': 1000}
+    ... ]
+    >>> result = process_order(12345, items)
+    >>> print(result['total_price'])
+    2000
+    """
+    # 処理...
+    pass
+```
+
+---
+
+## 9. 仮想環境
+
+### 仮想環境とは？
+
+**プロジェクトごとに独立したPython環境**を作る仕組み
+
+#### なぜ必要？
+
+```
+プロジェクトA: Django 3.2が必要
+プロジェクトB: Django 4.2が必要
+
+→ 仮想環境がないと競合してしまう！
+```
+
+### venv（標準ライブラリ）
+
+#### 作成
+
+```bash
+# 仮想環境を作成
+python -m venv venv
+
+# または特定の名前で
+python -m venv myenv
+```
+
+#### 有効化
+
+```bash
+# Windows
+venv\Scripts\activate
+
+# macOS / Linux
+source venv/bin/activate
+
+# 有効化されると...
+(venv) $  # プロンプトに(venv)が表示される
+```
+
+#### 使用
+
+```bash
+# 仮想環境内でパッケージをインストール
+(venv) $ pip install flask
+(venv) $ pip install requests pandas
+
+# インストール済みパッケージ確認
+(venv) $ pip list
+
+# requirements.txt作成
+(venv) $ pip freeze > requirements.txt
+```
+
+#### 無効化
+
+```bash
+(venv) $ deactivate
+```
+
+#### requirements.txtから復元
+
+```bash
+# 別の環境で同じパッケージをインストール
+pip install -r requirements.txt
+```
+
+### プロジェクト構成例
+
+```
+daifuku_shop/
+├── venv/                    # 仮想環境（Gitには含めない）
+├── daifuku_shop/            # ソースコード
+│   ├── __init__.py
+│   ├── models.py
+│   └── services.py
+├── tests/
+│   └── test_models.py
+├── requirements.txt         # 依存パッケージリスト
+├── .gitignore              # venv/を除外
+└── README.md
+```
+
+### .gitignore
+
+```
+# 仮想環境は共有しない
+venv/
+env/
+.venv/
+
+# Python関連
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+```
+
+### requirements.txt例
+
+```
+# requirements.txt
+Flask==3.0.0
+requests==2.31.0
+pandas==2.1.0
+pytest==7.4.0
+black==23.10.0
+flake8==6.1.0
+mypy==1.6.0
+```
+
+### pyenv（複数のPythonバージョン管理）
+
+```bash
+# pyenvインストール後...
+
+# 利用可能なPythonバージョン一覧
+pyenv install --list
+
+# Python 3.10.5をインストール
+pyenv install 3.10.5
+
+# グローバルバージョン設定
+pyenv global 3.10.5
+
+# プロジェクトごとのバージョン設定
+cd my_project
+pyenv local 3.10.5
+```
+
+### pipenv（パッケージ管理 + 仮想環境）
+
+```bash
+# pipenvインストール
+pip install pipenv
+
+# プロジェクト初期化
+cd my_project
+pipenv --python 3.10
+
+# パッケージインストール
+pipenv install flask
+pipenv install --dev pytest  # 開発用
+
+# 仮想環境に入る
+pipenv shell
+
+# スクリプト実行
+pipenv run python app.py
+```
+
+### Poetry（モダンな依存管理）
+
+```bash
+# Poetryインストール
+curl -sSL https://install.python-poetry.org | python3 -
+
+# プロジェクト初期化
+poetry new my-project
+cd my-project
+
+# パッケージインストール
+poetry add flask
+poetry add --group dev pytest
+
+# 仮想環境に入る
+poetry shell
+
+# スクリプト実行
+poetry run python app.py
+```
+
+---
+
+## 総合実践例
+
+```python
+"""
+大福店管理システム
+
+このモジュールは大福店の商品と注文を管理します。
+"""
+
+from abc import ABC, abstractmethod
+from typing import List, Optional
+from datetime import datetime
+
+
+class Product(ABC):
+    """
+    商品の抽象基底クラス
+    
+    すべての商品はこのクラスを継承する必要があります。
+    """
+    
+    def __init__(self, name: str, price: int):
+        """
+        商品を初期化
+        
+        Args:
+            name (str): 商品名
+            price (int): 価格
+        
+        Raises:
+            ValueError: 価格が0以下の場合
+        """
+        if price <= 0:
+            raise ValueError("価格は正の値である必要があります")
+        
+        self._name = name
+        self._price = price
+    
+    @property
+    def name(self) -> str:
+        """商品名を取得"""
+        return self._name
+    
+    @property
+    def price(self) -> int:
+        """価格を取得"""
+        return self._price
+    
+    @abstractmethod
+    def describe(self) -> str:
+        """
+        商品説明を取得（サブクラスで実装）
+        
+        Returns:
+
+```python
+        str: 商品の説明文
+        """
+        pass
+    
+    def calculate_total(self, quantity: int) -> int:
+        """
+        合計金額を計算
+        
+        Args:
+            quantity (int): 数量
+        
+        Returns:
+            int: 合計金額
+        """
+        return self._price * quantity
+
+
+class Daifuku(Product):
+    """
+    大福クラス
+    
+    味付き大福を表現します。
+    """
+    
+    def __init__(self, name: str, price: int, flavor: str):
+        """
+        大福を初期化
+        
+        Args:
+            name (str): 商品名
+            price (int): 価格
+            flavor (str): 味（いちご、抹茶など）
+        """
+        super().__init__(name, price)
+        self.flavor = flavor
+    
+    def describe(self) -> str:
+        """
+        大福の説明を取得
+        
+        Returns:
+            str: 商品説明
+        
+        Examples:
+            >>> daifuku = Daifuku("大福", 200, "いちご")
+            >>> print(daifuku.describe())
+            いちご大福: 200円
+        """
+        return f"{self.flavor}{self.name}: {self.price}円"
+
+
+class PremiumDaifuku(Daifuku):
+    """
+    プレミアム大福クラス
+    
+    高級素材を使用した大福です。
+    """
+    
+    def __init__(self, name: str, price: int, flavor: str, special_ingredient: str):
+        """
+        プレミアム大福を初期化
+        
+        Args:
+            name (str): 商品名
+            price (int): 価格
+            flavor (str): 味
+            special_ingredient (str): 特別な材料
+        """
+        super().__init__(name, price, flavor)
+        self._special_ingredient = special_ingredient
+    
+    def describe(self) -> str:
+        """
+        プレミアム大福の説明を取得
+        
+        Returns:
+            str: 商品説明（特別材料情報付き）
+        """
+        base_description = super().describe()
+        return f"{base_description}（{self._special_ingredient}使用）"
+
+
+class Discountable(ABC):
+    """割引可能インターフェース"""
+    
+    @abstractmethod
+    def apply_discount(self, rate: float) -> None:
+        """
+        割引を適用
+        
+        Args:
+            rate (float): 割引率（0.0～1.0）
+        """
+        pass
+
+
+class SeasonalDaifuku(Daifuku, Discountable):
+    """
+    季節限定大福クラス
+    
+    期間限定で販売される大福。割引可能。
+    """
+    
+    def __init__(self, name: str, price: int, flavor: str, season: str):
+        """
+        季節限定大福を初期化
+        
+        Args:
+            name (str): 商品名
+            price (int): 価格
+            flavor (str): 味
+            season (str): 季節（春、夏、秋、冬）
+        """
+        super().__init__(name, price, flavor)
+        self.season = season
+        self._original_price = price
+    
+    def describe(self) -> str:
+        """季節限定大福の説明"""
+        base = super().describe()
+        return f"【{self.season}限定】{base}"
+    
+    def apply_discount(self, rate: float) -> None:
+        """
+        割引を適用
+        
+        Args:
+            rate (float): 割引率（0.0～1.0）
+        
+        Raises:
+            ValueError: 割引率が範囲外の場合
+        
+        Examples:
+            >>> daifuku = SeasonalDaifuku("大福", 300, "桜", "春")
+            >>> daifuku.apply_discount(0.2)  # 20%オフ
+            >>> print(daifuku.price)
+            240
+        """
+        if not 0 <= rate <= 1:
+            raise ValueError("割引率は0～1の範囲で指定してください")
+        
+        self._price = int(self._original_price * (1 - rate))
+
+
+class Order:
+    """
+    注文クラス
+    
+    商品の注文情報を管理します。
+    """
+    
+    # クラス変数：注文番号のカウンター
+    _order_counter = 0
+    
+    def __init__(self, customer_name: str):
+        """
+        注文を初期化
+        
+        Args:
+            customer_name (str): 顧客名
+        """
+        Order._order_counter += 1
+        self._order_id = Order._order_counter
+        self._customer_name = customer_name
+        self._items: List[tuple[Product, int]] = []
+        self._created_at = datetime.now()
+    
+    @property
+    def order_id(self) -> int:
+        """注文IDを取得（読み取り専用）"""
+        return self._order_id
+    
+    @property
+    def customer_name(self) -> str:
+        """顧客名を取得"""
+        return self._customer_name
+    
+    def add_item(self, product: Product, quantity: int = 1) -> None:
+        """
+        商品を追加
+        
+        Args:
+            product (Product): 商品
+            quantity (int): 数量（デフォルト1）
+        
+        Raises:
+            ValueError: 数量が0以下の場合
+        
+        Examples:
+            >>> order = Order("田中太郎")
+            >>> daifuku = Daifuku("大福", 200, "いちご")
+            >>> order.add_item(daifuku, 3)
+        """
+        if quantity <= 0:
+            raise ValueError("数量は1以上である必要があります")
+        
+        self._items.append((product, quantity))
+    
+    def calculate_total(self) -> int:
+        """
+        注文の合計金額を計算
+        
+        Returns:
+            int: 合計金額
+        """
+        total = 0
+        for product, quantity in self._items:
+            total += product.calculate_total(quantity)
+        return total
+    
+    def get_summary(self) -> str:
+        """
+        注文サマリーを取得
+        
+        Returns:
+            str: 注文の詳細情報
+        """
+        lines = [
+            f"注文番号: {self._order_id}",
+            f"顧客名: {self._customer_name}",
+            f"注文日時: {self._created_at.strftime('%Y-%m-%d %H:%M:%S')}",
+            "---商品一覧---"
+        ]
+        
+        for product, quantity in self._items:
+            lines.append(f"  {product.describe()} × {quantity}個")
+        
+        lines.append(f"合計金額: {self.calculate_total()}円")
+        
+        return "\n".join(lines)
+    
+    @classmethod
+    def get_order_count(cls) -> int:
+        """
+        これまでの総注文数を取得
+        
+        Returns:
+            int: 注文数
+        """
+        return cls._order_counter
+    
+    @staticmethod
+    def is_valid_quantity(quantity: int) -> bool:
+        """
+        数量が妥当かチェック
+        
+        Args:
+            quantity (int): 数量
+        
+        Returns:
+            bool: 妥当ならTrue
+        """
+        return 1 <= quantity <= 100
+
+
+class PaymentMethod(ABC):
+    """決済方法の抽象基底クラス"""
+    
+    @abstractmethod
+    def process_payment(self, amount: int) -> str:
+        """
+        決済を処理
+        
+        Args:
+            amount (int): 金額
+        
+        Returns:
+            str: 決済結果メッセージ
+        """
+        pass
+
+
+class CreditCard(PaymentMethod):
+    """クレジットカード決済"""
+    
+    def __init__(self, card_number: str):
+        self.__card_number = card_number  # private
+    
+    def process_payment(self, amount: int) -> str:
+        """クレジットカードで決済"""
+        masked = f"****-****-****-{self.__card_number[-4:]}"
+        return f"クレジットカード（{masked}）で{amount}円を決済しました"
+
+
+class Cash(PaymentMethod):
+    """現金決済"""
+    
+    def process_payment(self, amount: int) -> str:
+        """現金で決済"""
+        return f"現金で{amount}円をお支払いいただきました"
+
+
+class OrderProcessor:
+    """
+    注文処理クラス
+    
+    注文の作成から決済までを処理します。
+    """
+    
+    def __init__(self):
+        self._orders: List[Order] = []
+    
+    def create_order(self, customer_name: str) -> Order:
+        """
+        新規注文を作成
+        
+        Args:
+            customer_name (str): 顧客名
+        
+        Returns:
+            Order: 作成された注文
+        """
+        order = Order(customer_name)
+        self._orders.append(order)
+        return order
+    
+    def process_payment(
+        self, 
+        order: Order, 
+        payment_method: PaymentMethod
+    ) -> str:
+        """
+        注文の決済を処理（ポリモーフィズム活用）
+        
+        Args:
+            order (Order): 注文
+            payment_method (PaymentMethod): 決済方法
+        
+        Returns:
+            str: 決済結果
+        """
+        amount = order.calculate_total()
+        result = payment_method.process_payment(amount)
+        return result
+    
+    def get_all_orders(self) -> List[Order]:
+        """全注文を取得"""
+        return self._orders.copy()
+
+
+# ===== 使用例 =====
+
+def main():
+    """メイン処理"""
+    
+    print("=" * 50)
+    print("ふわふわ大福店 注文システム")
+    print("=" * 50)
+    print()
+    
+    # 商品作成
+    ichigo = Daifuku("大福", 200, "いちご")
+    matcha = Daifuku("大福", 180, "抹茶")
+    premium = PremiumDaifuku("プレミアム大福", 500, "黒糖", "沖縄県産黒糖")
+    sakura = SeasonalDaifuku("大福", 300, "桜", "春")
+    
+    # 季節商品に割引適用
+    sakura.apply_discount(0.2)  # 20%オフ
+    
+    print("【商品一覧】")
+    print(ichigo.describe())
+    print(matcha.describe())
+    print(premium.describe())
+    print(sakura.describe())
+    print()
+    
+    # 注文処理システム
+    processor = OrderProcessor()
+    
+    # 注文1
+    order1 = processor.create_order("田中太郎")
+    order1.add_item(ichigo, 3)
+    order1.add_item(matcha, 2)
+    
+    print(order1.get_summary())
+    print()
+    
+    # 決済（ポリモーフィズム）
+    credit = CreditCard("1234567890123456")
+    result = processor.process_payment(order1, credit)
+    print(result)
+    print()
+    
+    # 注文2
+    order2 = processor.create_order("佐藤花子")
+    order2.add_item(premium, 1)
+    order2.add_item(sakura, 2)
+    
+    print(order2.get_summary())
+    print()
+    
+    # 現金決済
+    cash = Cash()
+    result = processor.process_payment(order2, cash)
+    print(result)
+    print()
+    
+    # 統計情報
+    print(f"総注文数: {Order.get_order_count()}件")
+    print()
+    
+    # 全注文確認
+    print("【全注文履歴】")
+    for order in processor.get_all_orders():
+        print(f"注文#{order.order_id}: {order.customer_name}様 - {order.calculate_total()}円")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+### 実行結果
+
+```
+==================================================
+ふわふわ大福店 注文システム
+==================================================
+
+【商品一覧】
+いちご大福: 200円
+抹茶大福: 180円
+黒糖プレミアム大福: 500円（沖縄県産黒糖使用）
+【春限定】桜大福: 240円
+
+注文番号: 1
+顧客名: 田中太郎
+注文日時: 2025-10-02 14:30:45
+---商品一覧---
+  いちご大福: 200円 × 3個
+  抹茶大福: 180円 × 2個
+合計金額: 960円
+
+クレジットカード（****-****-****-3456）で960円を決済しました
+
+注文番号: 2
+顧客名: 佐藤花子
+注文日時: 2025-10-02 14:30:45
+---商品一覧---
+  黒糖プレミアム大福: 500円（沖縄県産黒糖使用） × 1個
+  【春限定】桜大福: 240円 × 2個
+合計金額: 980円
+
+現金で980円をお支払いいただきました
+
+総注文数: 2件
+
+【全注文履歴】
+注文#1: 田中太郎様 - 960円
+注文#2: 佐藤花子様 - 980円
+```
+
+---
+
+## まとめチェックリスト
+
+### クラスとインスタンス
+- [ ] クラスは設計図、インスタンスは実体
+- [ ] `__init__`でインスタンスを初期化
+- [ ] `self`でインスタンス変数にアクセス
+
+### メソッド
+- [ ] インスタンスメソッド：`self`を使う
+- [ ] クラスメソッド：`@classmethod`、`cls`を使う
+- [ ] 静的メソッド：`@staticmethod`、独立した処理
+
+### アクセス制御
+- [ ] public：そのまま
+- [ ] protected：`_`で始める（慣習）
+- [ ] private：`__`で始める（Name Mangling）
+- [ ] プロパティ：`@property`でgetter/setter
+
+### 継承
+- [ ] 親クラスの機能を引き継ぐ
+- [ ] `super()`で親のメソッドを呼ぶ
+- [ ] 多重継承も可能
+
+### オーバーライド
+- [ ] 親のメソッドを子で上書き
+- [ ] 必要に応じて`super()`で親も呼ぶ
+
+### ポリモーフィズム
+- [ ] 同じインターフェースで異なる動作
+- [ ] 抽象基底クラス（ABC）を活用
+- [ ] 型を気にせず統一的に扱える
+
+### オーバーロード
+- [ ] Pythonには従来のオーバーロードはない
+- [ ] デフォルト引数や可変長引数で代替
+
+### docstring
+- [ ] クラス、メソッド、関数に説明を記述
+- [ ] PEP 257に従う
+- [ ] Google/NumPyスタイルを使う
+
+### 仮想環境
+- [ ] プロジェクトごとに独立した環境
+- [ ] `venv`で作成、`activate`で有効化
+- [ ] `requirements.txt`で依存管理
+
+---
+
+この総合例で、Pythonのオブジェクト指向プログラミングの主要概念をすべてカバーしました！実際のプロジェクトでこれらの概念を組み合わせて使っていきましょう！
