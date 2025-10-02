@@ -1,0 +1,835 @@
+# Python新人エンジニア研修資料
+
+## 目次
+1. [Python命名規則](#1-python命名規則)
+2. [仮想環境](#2-仮想環境)
+3. [基本文法](#3-基本文法)
+4. [モジュール](#4-モジュール)
+5. [ドックストリング](#5-ドックストリング)
+6. [pytest](#6-pytest)
+7. [unittest](#7-unittest)
+
+---
+
+## 1. Python命名規則
+
+Pythonでは**PEP 8**というスタイルガイドに従った命名規則があります。
+
+### 基本ルール
+
+```python
+# 変数名・関数名: snake_case（小文字とアンダースコア）
+user_name = "太郎"  # 変数は小文字で単語をアンダースコアで区切る
+max_count = 100  # 定数のような変数も小文字でOK
+
+def calculate_total_price(price, tax_rate):  # 関数名もsnake_case
+    return price * (1 + tax_rate)  # 計算結果を返す
+
+# 定数: UPPER_SNAKE_CASE（大文字とアンダースコア）
+MAX_RETRY_COUNT = 3  # 定数は全て大文字で定義
+API_BASE_URL = "https://api.example.com"  # URLなどの固定値
+
+# クラス名: PascalCase（各単語の先頭を大文字）
+class UserAccount:  # クラス名は大文字で始まり、単語ごとに大文字
+    pass  # クラスの中身はここに書く
+
+class ShoppingCart:  # 複数単語の場合も各単語の先頭を大文字
+    pass
+
+# プライベート変数・メソッド: 先頭にアンダースコア
+class BankAccount:
+    def __init__(self):
+        self._balance = 0  # 単一アンダースコア：内部使用を示唆
+        self.__pin = "1234"  # 二重アンダースコア：名前修飾される
+    
+    def _internal_method(self):  # プライベートメソッド
+        pass  # クラス内部でのみ使用する想定
+
+# NG例（避けるべき命名）
+userName = "太郎"  # キャメルケースは避ける（JavaScriptではOK）
+UserName = "太郎"  # パスカルケースは変数に使わない
+user_Name = "太郎"  # 混在は避ける
+l = 10  # 1文字変数は避ける（lとIと1が紛らわしい）
+O = 0  # 同様にOと0も紛らわしい
+```
+
+---
+
+## 2. 仮想環境
+
+仮想環境は、プロジェクトごとに独立したPython環境を作る仕組みです。
+
+### なぜ必要？
+
+```python
+# プロジェクトAではDjango 3.2を使いたい
+# プロジェクトBではDjango 4.0を使いたい
+# → 仮想環境を使わないと競合してしまう
+```
+
+### venvの使い方
+
+```bash
+# 仮想環境の作成（venvという名前のフォルダが作られる）
+python -m venv venv
+
+# 仮想環境の有効化（Windows）
+venv\Scripts\activate
+
+# 仮想環境の有効化（Mac/Linux）
+source venv/bin/activate
+
+# 有効化されると、プロンプトに(venv)と表示される
+# (venv) C:\Users\user\project>
+
+# パッケージのインストール（仮想環境内にのみインストールされる）
+pip install requests
+
+# インストール済みパッケージの確認
+pip list
+
+# requirements.txtの作成（依存関係を記録）
+pip freeze > requirements.txt
+
+# requirements.txtからインストール（チームメンバーが同じ環境を再現）
+pip install -r requirements.txt
+
+# 仮想環境の無効化
+deactivate
+```
+
+### 実践例
+
+```python
+# プロジェクトフォルダを作成
+# project/
+#   ├── venv/          # 仮想環境（gitには含めない）
+#   ├── src/           # ソースコード
+#   ├── tests/         # テストコード
+#   └── requirements.txt  # 依存パッケージリスト
+
+# .gitignoreに追加（仮想環境はgitで管理しない）
+"""
+venv/
+__pycache__/
+*.pyc
+"""
+```
+
+---
+
+## 3. 基本文法
+
+### データ型と変数
+
+```python
+# 整数型（int）
+age = 25  # 年齢を整数で代入
+count = 0  # カウンター変数を0で初期化
+
+# 浮動小数点型（float）
+price = 99.99  # 価格を小数で代入
+tax_rate = 0.1  # 税率を0.1（10%）で代入
+
+# 文字列型（str）
+name = "山田太郎"  # 名前を文字列で代入
+message = 'こんにちは'  # シングルクォートでもOK
+multiline = """複数行の
+文字列も可能"""  # 三重クォートで複数行
+
+# 論理型（bool）
+is_active = True  # 真偽値（TrueまたはFalse）
+has_permission = False  # Falseは偽を表す
+
+# リスト（list）- 順序があり、変更可能
+fruits = ["apple", "banana", "orange"]  # 文字列のリストを作成
+numbers = [1, 2, 3, 4, 5]  # 整数のリストを作成
+mixed = [1, "text", True, 3.14]  # 異なる型も混在可能
+
+# タプル（tuple）- 順序があり、変更不可
+coordinates = (35.6812, 139.7671)  # 緯度経度のタプル（変更できない）
+rgb = (255, 128, 0)  # RGB色のタプル
+
+# 辞書（dict）- キーと値のペア
+user = {
+    "name": "太郎",  # キー"name"に値"太郎"を関連付け
+    "age": 25,  # キー"age"に値25を関連付け
+    "email": "taro@example.com"  # キー"email"にメールアドレスを関連付け
+}
+
+# セット（set）- 重複なし、順序なし
+unique_numbers = {1, 2, 3, 3, 2, 1}  # 重複は自動的に削除される → {1, 2, 3}
+```
+
+### 制御構文
+
+```python
+# if文（条件分岐）
+age = 20  # 年齢変数を20に設定
+
+if age >= 20:  # もしageが20以上なら
+    print("成人です")  # この処理を実行
+elif age >= 13:  # そうでなく、13以上なら
+    print("未成年です")  # この処理を実行
+else:  # それ以外（13未満）なら
+    print("子供です")  # この処理を実行
+
+# for文（繰り返し処理）
+fruits = ["apple", "banana", "orange"]  # フルーツのリストを用意
+
+for fruit in fruits:  # リストの各要素を順番に取り出す
+    print(f"好きな果物: {fruit}")  # f-stringで変数を埋め込んで出力
+
+# range()を使った繰り返し
+for i in range(5):  # 0から4まで5回繰り返す
+    print(f"カウント: {i}")  # iは0, 1, 2, 3, 4と変化
+
+# while文（条件が真の間繰り返す）
+count = 0  # カウンター変数を0で初期化
+
+while count < 5:  # countが5未満の間繰り返す
+    print(f"現在のカウント: {count}")  # 現在の値を出力
+    count += 1  # countを1増やす（count = count + 1と同じ）
+
+# リスト内包表記（簡潔にリストを作成）
+squares = [x ** 2 for x in range(10)]  # 0〜9の二乗のリストを作成
+# これは以下と同じ意味:
+# squares = []
+# for x in range(10):
+#     squares.append(x ** 2)
+
+even_numbers = [x for x in range(20) if x % 2 == 0]  # 0〜19の偶数のみ
+# xを2で割った余りが0（偶数）のものだけ追加
+```
+
+### 関数
+
+```python
+# 基本的な関数定義
+def greet(name):  # 引数nameを受け取る関数を定義
+    """挨拶を返す関数"""  # ドックストリング（後述）
+    return f"こんにちは、{name}さん！"  # 挨拶文を返す
+
+result = greet("太郎")  # 関数を呼び出し、結果をresultに代入
+print(result)  # "こんにちは、太郎さん！"と出力
+
+# デフォルト引数
+def create_user(name, age=20, city="東京"):  # age, cityにデフォルト値を設定
+    return {  # 辞書を返す
+        "name": name,  # 必須引数
+        "age": age,  # 省略時は20が使われる
+        "city": city  # 省略時は"東京"が使われる
+    }
+
+user1 = create_user("太郎")  # age, cityは省略（デフォルト値使用）
+user2 = create_user("花子", 25, "大阪")  # 全ての引数を指定
+
+# キーワード引数
+user3 = create_user(name="次郎", city="福岡")  # ageは省略、順序を変更
+
+# 可変長引数
+def sum_all(*numbers):  # *numbersは任意の個数の引数を受け取る
+    total = 0  # 合計値を0で初期化
+    for num in numbers:  # 受け取った全ての数値を順に処理
+        total += num  # totalに加算していく
+    return total  # 合計値を返す
+
+result = sum_all(1, 2, 3, 4, 5)  # 何個でも引数を渡せる → 15
+
+# キーワード可変長引数
+def print_info(**kwargs):  # **kwargsは任意のキーワード引数を辞書として受け取る
+    for key, value in kwargs.items():  # 辞書の各キーと値を取り出す
+        print(f"{key}: {value}")  # キーと値を出力
+
+print_info(name="太郎", age=25, city="東京")  # 任意のキーワード引数を渡せる
+
+# ラムダ式（無名関数）
+double = lambda x: x * 2  # xを2倍にする簡易関数
+print(double(5))  # 10と出力
+
+# map関数と組み合わせ
+numbers = [1, 2, 3, 4, 5]  # 数値のリスト
+doubled = list(map(lambda x: x * 2, numbers))  # 各要素を2倍にする
+# リストの各要素にlambda関数を適用し、新しいリストを作成
+```
+
+---
+
+## 4. モジュール
+
+モジュールは、Pythonコードを整理し再利用可能にする仕組みです。
+
+### モジュールの作成
+
+```python
+# math_utils.py というファイルを作成
+"""
+数学関連のユーティリティ関数モジュール
+"""
+
+PI = 3.14159  # 円周率の定数を定義（モジュールレベルの変数）
+
+def add(a, b):  # 加算関数を定義
+    """2つの数を足し算する"""
+    return a + b  # aとbの合計を返す
+
+def subtract(a, b):  # 減算関数を定義
+    """2つの数を引き算する"""
+    return a - b  # aからbを引いた値を返す
+
+def multiply(a, b):  # 乗算関数を定義
+    """2つの数を掛け算する"""
+    return a * b  # aとbの積を返す
+
+class Calculator:  # 電卓クラスを定義
+    """簡易電卓クラス"""
+    
+    def __init__(self):  # コンストラクタ（初期化メソッド）
+        self.result = 0  # 計算結果を保持する変数を0で初期化
+    
+    def add(self, value):  # 値を加算するメソッド
+        self.result += value  # 現在の結果にvalueを加算
+        return self  # メソッドチェーンのため自身を返す
+    
+    def get_result(self):  # 結果を取得するメソッド
+        return self.result  # 現在の計算結果を返す
+```
+
+### モジュールのインポート
+
+```python
+# main.py というファイルで使用
+
+# モジュール全体をインポート
+import math_utils  # math_utils.pyをインポート
+
+result = math_utils.add(5, 3)  # モジュール名.関数名で使用
+print(result)  # 8と出力
+
+# 特定の関数だけインポート
+from math_utils import add, subtract  # addとsubtract関数のみインポート
+
+result = add(10, 5)  # モジュール名なしで直接使用可能
+print(result)  # 15と出力
+
+# 別名でインポート
+import math_utils as mu  # math_utilsをmuという短い名前で使用
+
+result = mu.multiply(4, 7)  # muという別名で使用
+print(result)  # 28と出力
+
+# 全てをインポート（通常は非推奨）
+from math_utils import *  # モジュールの全要素をインポート
+# 名前空間が汚染されるため、明示的なインポートが推奨される
+
+result = add(2, 3)  # 直接使用可能
+calc = Calculator()  # クラスも直接使用可能
+```
+
+### パッケージ構造
+
+```python
+# プロジェクト構造例
+"""
+myproject/
+  ├── __init__.py          # パッケージの初期化ファイル（空でもOK）
+  ├── math_utils.py        # 数学ユーティリティモジュール
+  ├── string_utils.py      # 文字列ユーティリティモジュール
+  └── database/            # データベース関連のサブパッケージ
+      ├── __init__.py      # サブパッケージの初期化ファイル
+      ├── connection.py    # DB接続モジュール
+      └── models.py        # DBモデルモジュール
+"""
+
+# パッケージからのインポート
+from myproject.math_utils import add  # myprojectパッケージのmath_utilsモジュールからaddをインポート
+from myproject.database.connection import connect  # サブパッケージからインポート
+
+# __init__.pyの活用例
+# myproject/__init__.py
+from .math_utils import add, subtract  # 相対インポート（.は現在のパッケージを表す）
+from .string_utils import capitalize  # 同じパッケージ内の別モジュール
+
+# これにより以下のように使用可能
+from myproject import add  # __init__.pyでインポートしたものを直接使用
+```
+
+---
+
+## 5. ドックストリング
+
+ドックストリングは、関数やクラスの説明を記述する文字列です。
+
+### 基本形式
+
+```python
+def calculate_area(width, height):  # 面積を計算する関数を定義
+    """
+    長方形の面積を計算する
+    
+    Args:
+        width (float): 幅（単位: メートル）
+        height (float): 高さ（単位: メートル）
+    
+    Returns:
+        float: 計算された面積（単位: 平方メートル）
+    
+    Examples:
+        >>> calculate_area(5.0, 3.0)
+        15.0
+    """
+    return width * height  # 幅と高さを掛けて面積を返す
+
+# ドックストリングの参照
+print(calculate_area.__doc__)  # 関数のドックストリングを出力
+help(calculate_area)  # より詳細なヘルプを表示
+```
+
+### Google スタイル
+
+```python
+def fetch_user_data(user_id, include_posts=False):  # ユーザーデータ取得関数
+    """ユーザー情報をデータベースから取得する
+    
+    データベースから指定されたIDのユーザー情報を取得し、
+    オプションで投稿データも含めることができる。
+    
+    Args:
+        user_id (int): 取得するユーザーのID（1以上の整数）
+        include_posts (bool, optional): 投稿データを含めるかどうか。
+            デフォルトはFalse。Trueの場合、ユーザーの全投稿を取得。
+    
+    Returns:
+        dict: ユーザー情報を含む辞書
+            - 'name' (str): ユーザー名
+            - 'email' (str): メールアドレス
+            - 'posts' (list): 投稿リスト（include_posts=Trueの場合のみ）
+    
+    Raises:
+        ValueError: user_idが0以下の場合に発生
+        DatabaseError: データベース接続に失敗した場合に発生
+    
+    Examples:
+        >>> user = fetch_user_data(123)
+        >>> print(user['name'])
+        '山田太郎'
+        
+        >>> user_with_posts = fetch_user_data(123, include_posts=True)
+        >>> len(user_with_posts['posts'])
+        5
+    """
+    if user_id <= 0:  # user_idが0以下かチェック
+        raise ValueError("user_idは1以上である必要があります")  # エラーを発生
+    
+    # データベースからユーザーを取得する処理（疑似コード）
+    user = {"name": "山田太郎", "email": "yamada@example.com"}  # サンプルデータ
+    
+    if include_posts:  # 投稿データを含める場合
+        user["posts"] = ["投稿1", "投稿2"]  # 投稿リストを追加
+    
+    return user  # ユーザー情報を返す
+```
+
+### クラスのドックストリング
+
+```python
+class BankAccount:  # 銀行口座クラスを定義
+    """銀行口座を表すクラス
+    
+    口座の残高管理と入出金操作を提供する。
+    残高は常に0以上に保たれる。
+    
+    Attributes:
+        account_number (str): 口座番号（10桁の数字）
+        balance (float): 現在の残高（単位: 円）
+        owner (str): 口座所有者の名前
+    
+    Examples:
+        >>> account = BankAccount("1234567890", "山田太郎")
+        >>> account.deposit(10000)
+        >>> account.get_balance()
+        10000.0
+    """
+    
+    def __init__(self, account_number, owner):  # コンストラクタ
+        """
+        BankAccountインスタンスを初期化する
+        
+        Args:
+            account_number (str): 口座番号（10桁の数字）
+            owner (str): 口座所有者の名前
+        """
+        self.account_number = account_number  # 口座番号を保存
+        self.owner = owner  # 所有者名を保存
+        self.balance = 0.0  # 残高を0円で初期化
+    
+    def deposit(self, amount):  # 入金メソッド
+        """
+        口座に入金する
+        
+        Args:
+            amount (float): 入金額（正の数）
+        
+        Raises:
+            ValueError: 入金額が0以下の場合
+        """
+        if amount <= 0:  # 入金額が0以下かチェック
+            raise ValueError("入金額は正の数である必要があります")  # エラー発生
+        self.balance += amount  # 残高に入金額を加算
+    
+    def get_balance(self):  # 残高取得メソッド
+        """
+        現在の残高を取得する
+        
+        Returns:
+            float: 現在の残高
+        """
+        return self.balance  # 残高を返す
+```
+
+---
+
+## 6. pytest
+
+pytestは、Pythonの代表的なテストフレームワークです。
+
+### インストール
+
+```bash
+# pytestのインストール
+pip install pytest
+
+# 実行
+pytest  # カレントディレクトリ以下の全テストを実行
+pytest tests/  # testsディレクトリ内のテストを実行
+pytest -v  # 詳細な出力で実行
+pytest -k "test_add"  # 名前に"test_add"を含むテストのみ実行
+```
+
+### 基本的なテスト
+
+```python
+# test_math_utils.py というファイル名で作成
+# （pytestはtest_で始まるファイルを自動検出）
+
+def add(a, b):  # テスト対象の関数
+    """2つの数を足し算する"""
+    return a + b  # 合計を返す
+
+def test_add_positive_numbers():  # test_で始まる関数名にする
+    """正の数の加算テスト"""
+    result = add(2, 3)  # 関数を実行
+    assert result == 5  # 期待値と一致するか検証（Trueでなければエラー）
+
+def test_add_negative_numbers():  # 負の数のテスト
+    """負の数の加算テスト"""
+    result = add(-2, -3)  # 負の数で実行
+    assert result == -5  # 期待値-5と比較
+
+def test_add_zero():  # ゼロのテスト
+    """ゼロとの加算テスト"""
+    result = add(5, 0)  # 5 + 0を実行
+    assert result == 5  # 結果が5であることを検証
+    
+    result = add(0, 0)  # 0 + 0を実行
+    assert result == 0  # 結果が0であることを検証
+```
+
+### フィクスチャ（前処理・後処理）
+
+```python
+import pytest  # pytestモジュールをインポート
+
+@pytest.fixture  # フィクスチャとして定義（テストの準備処理）
+def sample_user():  # テストで使用するサンプルユーザーを作成
+    """テスト用のサンプルユーザーを作成"""
+    user = {  # ユーザー情報の辞書を作成
+        "name": "太郎",  # 名前
+        "age": 25,  # 年齢
+        "email": "taro@example.com"  # メールアドレス
+    }
+    return user  # 作成したユーザーを返す
+
+def test_user_name(sample_user):  # 引数でフィクスチャを受け取る
+    """ユーザー名のテスト"""
+    assert sample_user["name"] == "太郎"  # 名前が正しいか検証
+
+def test_user_age(sample_user):  # 同じフィクスチャを別のテストでも使用
+    """ユーザー年齢のテスト"""
+    assert sample_user["age"] == 25  # 年齢が正しいか検証
+
+# セットアップとティアダウン
+@pytest.fixture  # データベース接続のフィクスチャ
+def database_connection():  # データベース接続を提供
+    """データベース接続のセットアップとクリーンアップ"""
+    conn = "データベース接続オブジェクト（疑似）"  # 接続を作成
+    print("データベースに接続しました")  # セットアップ処理
+    
+    yield conn  # テストに接続オブジェクトを渡す（yieldで一時停止）
+    
+    # yieldの後はテスト終了後に実行される（クリーンアップ）
+    print("データベース接続を閉じました")  # ティアダウン処理
+
+def test_database_query(database_connection):  # フィクスチャを使用
+    """データベースクエリのテスト"""
+    conn = database_connection  # 接続を取得
+    # テスト処理...
+    assert conn is not None  # 接続が存在することを確認
+```
+
+### パラメータ化テスト
+
+```python
+import pytest  # pytestモジュールをインポート
+
+@pytest.mark.parametrize("a, b, expected", [  # 複数のテストケースを定義
+    (2, 3, 5),  # 1つ目のテストケース: 2 + 3 = 5
+    (0, 0, 0),  # 2つ目のテストケース: 0 + 0 = 0
+    (-1, 1, 0),  # 3つ目のテストケース: -1 + 1 = 0
+    (100, 200, 300),  # 4つ目のテストケース: 100 + 200 = 300
+])
+def test_add_parametrized(a, b, expected):  # 各テストケースで実行される
+    """パラメータ化された加算テスト"""
+    result = add(a, b)  # 関数を実行
+    assert result == expected  # 期待値と比較
+
+# 複数パラメータの組み合わせ
+@pytest.mark.parametrize("width", [1, 2, 3])  # widthの値
+@pytest.mark.parametrize("height", [4, 5, 6])  # heightの値
+def test_area_combinations(width, height):  # 全ての組み合わせでテスト（3×3=9回実行）
+    """面積計算の組み合わせテスト"""
+    area = width * height  # 面積を計算
+    assert area > 0  # 面積が正の数であることを確認
+    assert area == width * height  # 計算が正しいことを確認
+```
+
+### 例外のテスト
+
+```python
+import pytest  # pytestモジュールをインポート
+
+def divide(a, b):  # 割り算関数
+    """割り算を行う"""
+    if b == 0:  # ゼロ除算チェック
+        raise ValueError("0で割ることはできません")  # エラーを発生
+    return a / b  # 割り算結果を返す
+
+def test_divide_by_zero():  # ゼロ除算のテスト
+    """ゼロ除算時の例外テスト"""
+    with pytest.raises(ValueError) as exc_info:  # ValueErrorが発生することを期待
+        divide(10, 0)  # ゼロで割る（例外が発生するはず）
+    
+    assert "0で割ることはできません" in str(exc_info.value)  # エラーメッセージを検証
+
+def test_divide_normal():  # 正常ケースのテスト
+    """正常な割り算のテスト"""
+    result = divide(10, 2)  # 正常な割り算を実行
+    assert result == 5.0  # 結果が5.0であることを確認
+```
+
+---
+
+## 7. unittest
+
+unittestは、Python標準ライブラリに含まれるテストフレームワークです。
+
+### 基本的なテスト
+
+```python
+import unittest  # unittestモジュールをインポート
+
+def add(a, b):  # テスト対象の関数
+    """2つの数を足し算する"""
+    return a + b  # 合計を返す
+
+class TestMathOperations(unittest.TestCase):  # TestCaseクラスを継承
+    """数学演算のテストクラス"""
+    
+    def test_add_positive(self):  # test_で始まるメソッド名にする
+        """正の数の加算テスト"""
+        result = add(2, 3)  # 関数を実行
+        self.assertEqual(result, 5)  # 期待値5と比較（一致するか検証）
+    
+    def test_add_negative(self):  # 負の数のテスト
+        """負の数の加算テスト"""
+        result = add(-2, -3)  # 負の数で実行
+        self.assertEqual(result, -5)  # 期待値-5と比較
+    
+    def test_add_zero(self):  # ゼロのテスト
+        """ゼロとの加算テスト"""
+        result = add(5, 0)  # 5 + 0を実行
+        self.assertEqual(result, 5)  # 結果が5であることを検証
+
+# テストの実行
+if __name__ == "__main__":  # このファイルが直接実行された場合
+    unittest.main()  # 全てのテストを実行
+```
+
+### セットアップとティアダウン
+
+```python
+import unittest  # unittestモジュールをインポート
+
+class TestDatabaseOperations(unittest.TestCase):  # TestCaseを継承
+    """データベース操作のテストクラス"""
+    
+    def setUp(self):  # 各テストメソッド実行前に自動実行される
+        """各テスト前のセットアップ"""
+        self.connection = "データベース接続（疑似）"  # DB接続を作成
+        self.test_data = {"id": 1, "name": "太郎"}  # テスト用データを準備
+        print("セットアップ完了")  # セットアップ完了をログ出力
+    
+    def tearDown(self):  # 各テストメソッド実行後に自動実行される
+        """各テスト後のクリーンアップ"""
+        self.connection = None  # 接続をクリア
+        print("クリーンアップ完了")  # クリーンアップ完了をログ出力
+    
+    def test_insert_data(self):  # 1つ目のテスト
+        """データ挿入のテスト"""
+        # setUp()が実行された後、この処理が実行される
+        self.assertIsNotNone(self.connection)  # 接続が存在することを確認
+        self.assertEqual(self.test_data["name"], "太郎")  # データを検証
+        # このテスト後、tearDown()が自動実行される
+    
+    def test_update_data(self):  # 2つ目のテスト
+        """データ更新のテスト"""
+        # 再度setUp()が実行されてから、この処理が実行される
+        self.test_data["name"] = "花子"  # データを更新
+        self.assertEqual(self.test_data["name"], "花子")  # 更新を確認
+        # このテスト後も、tearDown()が自動実行される
+    
+    @classmethod
+    def setUpClass(cls):  # クラス全体で1回だけ実行（最初）
+        """クラス全体のセットアップ"""
+        print("クラスレベルのセットアップ")  # 全テスト前に1回だけ実行
+        cls.shared_resource = "共有リソース"  # 全テストで共有するリソース
+    
+    @classmethod
+    def tearDownClass(cls):  # クラス全体で1回だけ実行（最後）
+        """クラス全体のクリーンアップ"""
+        print("クラスレベルのクリーンアップ")  # 全テスト後に1回だけ実行
+        cls.shared_resource = None  # 共有リソースをクリア
+```
+
+### アサーションメソッド
+
+```python
+import unittest  # unittestモジュールをインポート
+
+class TestAssertions(unittest.TestCase):  # TestCaseを継承
+    """様々なアサーションのテストクラス"""
+    
+    def test_equality(self):  # 等価性のテスト
+        """等価性の検証"""
+        self.assertEqual(10, 10)  # 2つの値が等しいことを検証
+        self.assertNotEqual(10, 5)  # 2つの値が等しくないことを検証
+    
+    def test_truthiness(self):  # 真偽値のテスト
+        """真偽値の検証"""
+        self.assertTrue(True)  # 値がTrueであることを検証
+        self.assertFalse(False)  # 値がFalseであることを検証
+        self.assertTrue(1 > 0)  # 式の結果がTrueであることを検証
+    
+    def test_none(self):  # None値のテスト
+        """None値の検証"""
+        value = None  # None値を代入
+        self.assertIsNone(value)  # 値がNoneであることを検証
+        
+        value = "something"  # 文字列を代入
+        self.assertIsNotNone(value)  # 値がNoneでないことを検証
+    
+    def test_membership(self):  # 包含関係のテスト
+        """要素の包含関係の検証"""
+        fruits = ["apple", "banana", "orange"]  # リストを作成
+        self.assertIn("apple", fruits)  # 'apple'がリストに含まれることを検証
+        self.assertNotIn("grape", fruits)  # 'grape'がリストに含まれないことを検証
+    
+    def test_type(self):  # 型のテスト
+        """データ型の検証"""
+        value = 123  # 整数値を代入
+        self.assertIsInstance(value, int)  # valueがint型であることを検証
+        self.assertNotIsInstance(value, str)  # valueがstr型でないことを検証
+    
+    def test_comparison(self):  # 比較のテスト
+        """数値の比較検証"""
+        self.assertGreater(10, 5)  # 10が5より大きいことを検証
+        self.assertLess(5, 10)  # 5が10より小さいことを検証
+        self.assertGreaterEqual(10, 10)  # 10が10以上であることを検証
+        self.assertLessEqual(5, 10)  # 5が10以下であることを検証
+    
+    def test_sequences(self):  # シーケンスのテスト
+        """シーケンスの検証"""
+        list1 = [1, 2, 3]  # 1つ目のリスト
+        list2 = [1, 2, 3]  # 2つ目のリスト（内容は同じ）
+        self.assertListEqual(list1, list2)  # 2つのリストが等しいことを検証
+        
+        text = "Hello World"  # 文字列を作成
+        self.assertRegex(text, r"Hello")  # 正規表現にマッチすることを検証
+```
+
+### 例外のテスト
+
+```python
+import unittest  # unittestモジュールをインポート
+
+def divide(a, b):  # 割り算関数
+    """割り算を行う"""
+    if b == 0:  # ゼロ除算チェック
+        raise ValueError("0で割ることはできません")  # エラーを発生
+    return a / b  # 割り算結果を返す
+
+class TestExceptions(unittest.TestCase):  # TestCaseを継承
+    """例外処理のテストクラス"""
+    
+    def test_divide_by_zero(self):  # ゼロ除算のテスト
+        """ゼロ除算時の例外検証"""
+        with self.assertRaises(ValueError):  # ValueErrorが発生することを期待
+            divide(10, 0)  # ゼロで割る（例外が発生するはず）
+    
+    def test_divide_by_zero_with_message(self):  # メッセージ付きテスト
+        """例外メッセージの検証"""
+        with self.assertRaises(ValueError) as context:  # 例外情報を取得
+            divide(10, 0)  # ゼロで割る
+        
+        # 例外メッセージが正しいか検証
+        self.assertEqual(str(context.exception), "0で割ることはできません")
+    
+    def test_divide_normal(self):  # 正常ケースのテスト
+        """正常な割り算の検証"""
+        result = divide(10, 2)  # 正常な割り算を実行
+        self.assertEqual(result, 5.0)  # 結果が5.0であることを検証
+```
+
+### テストスイートの作成
+
+```python
+import unittest  # unittestモジュールをインポート
+
+# 複数のテストクラスを定義
+class TestAddition(unittest.TestCase):  # 加算のテストクラス
+    """加算のテスト"""
+    def test_add(self):  # 加算テスト
+        self.assertEqual(2 + 3, 5)  # 2 + 3 = 5を検証
+
+class TestSubtraction(unittest.TestCase):  # 減算のテストクラス
+    """減算のテスト"""
+    def test_subtract(self):  # 減算テスト
+        self.assertEqual(5 - 3, 2)  # 5 - 3 = 2を検証
+
+# テストスイートの作成
+def suite():  # テストスイートを作成する関数
+    """テストスイートを作成"""
+    test_suite = unittest.TestSuite()  # 空のテストスイートを作成
+    
+    # 個別のテストを追加
+    test_suite.addTest(TestAddition('test_add'))  # 加算テストを追加
+    test_suite.addTest(TestSubtraction('test_subtract'))  # 減算テストを追加
+    
+    # クラス全体を追加
+    test_suite.addTests(unittest.TestLoader().loadTestsFromTestCase(TestAddition))
+    # TestLoaderでTestAdditionクラスの全テストをロードして追加
+    
+    return test_suite  # 作成したテストスイートを返す
+
+# テストの実行
+if __name__ == "__main__":  
