@@ -1,0 +1,906 @@
+# ============================================
+# Python 技術デモコード - VSCode動作確認済み
+# ============================================
+
+from datetime import datetime
+from abc import ABC, abstractmethod
+import json
+
+
+# ============================================
+# 1. デコレーターの実装
+# ============================================
+
+def log_execution(func):
+    """関数の実行をログに記録するデコレーター"""
+    def wrapper(*args, **kwargs):
+        print(f"\n[LOG] {func.__name__} を実行中...")
+        result = func(*args, **kwargs)
+        print(f"[LOG] {func.__name__} が完了しました")
+        return result
+    return wrapper
+
+
+def validate_positive(func):
+    """引数が正の数かチェックするデコレーター"""
+    def wrapper(self, amount):
+        if amount <= 0:
+            raise ValueError(f"金額は0より大きい必要があります: {amount}")
+        return func(self, amount)
+    return wrapper
+
+
+# ============================================
+# 2. 抽象クラスとインターフェース
+# ============================================
+
+class Account(ABC):
+    """銀行口座の抽象基底クラス"""
+    
+    def __init__(self, account_number, owner, balance=0):
+        self._account_number = account_number
+        self._owner = owner
+        self._balance = balance
+        self._transactions = []
+    
+    @property
+    def account_number(self):
+        return self._account_number
+    
+    @property
+    def owner(self):
+        return self._owner
+    
+    @property
+    def balance(self):
+        return self._balance
+    
+    @abstractmethod
+    def calculate_interest(self):
+        """各口座タイプで実装が必要な抽象メソッド"""
+        pass
+    
+    @validate_positive
+    @log_execution
+    def deposit(self, amount):
+        """入金処理"""
+        self._balance += amount
+        self._add_transaction("入金", amount)
+        return self._balance
+    
+    @validate_positive
+    @log_execution
+    def withdraw(self, amount):
+        """出金処理"""
+        if amount > self._balance:
+            raise ValueError("残高不足です")
+        self._balance -= amount
+        self._add_transaction("出金", -amount)
+        return self._balance
+    
+    def _add_transaction(self, type_name, amount):
+        """取引履歴に追加"""
+        transaction = {
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "type": type_name,
+            "amount": amount,
+            "balance": self._balance
+        }
+        self._transactions.append(transaction)
+    
+    def get_statement(self):
+        """取引明細を表示"""
+        print(f"\n{'='*50}")
+        print(f"口座番号: {self._account_number}")
+        print(f"名義人: {self._owner}")
+        print(f"現在残高: ¥{self._balance:,}")
+        print(f"{'='*50}")
+        print("\n取引履歴:")
+        for t in self._transactions:
+            sign = "+" if t['amount'] > 0 else ""
+            print(f"  {t['timestamp']} | {t['type']:6s} | {sign}¥{t['amount']:>8,} | 残高: ¥{t['balance']:>10,}")
+        print(f"{'='*50}\n")
+
+
+# ============================================
+# 3. 具象クラスの実装
+# ============================================
+
+class SavingsAccount(Account):
+    """普通預金口座"""
+    
+    INTEREST_RATE = 0.001  # クラス変数: 0.1%
+    
+    def __init__(self, account_number, owner, balance=0):
+        super().__init__(account_number, owner, balance)
+        self._account_type = "普通預金"
+    
+    def calculate_interest(self):
+        """利息計算"""
+        interest = self._balance * self.INTEREST_RATE
+        print(f"利息: ¥{interest:,.2f} (金利: {self.INTEREST_RATE*100}%)")
+        return interest
+    
+    def add_interest(self):
+        """利息を口座に追加"""
+        interest = self.calculate_interest()
+        self._balance += interest
+        self._add_transaction("利息", interest)
+        print(f"利息 ¥{interest:,.2f} を追加しました")
+
+
+class FixedDepositAccount(Account):
+    """定期預金口座"""
+    
+    INTEREST_RATE = 0.02  # 2%
+    
+    def __init__(self, account_number, owner, balance, term_months):
+        super().__init__(account_number, owner, balance)
+        self._account_type = "定期預金"
+        self._term_months = term_months
+        self._maturity_date = None
+    
+    def calculate_interest(self):
+        """満期時の利息計算"""
+        interest = self._balance * self.INTEREST_RATE * (self._term_months / 12)
+        print(f"満期利息: ¥{interest:,.2f} (期間: {self._term_months}ヶ月, 金利: {self.INTEREST_RATE*100}%)")
+        return interest
+    
+    def withdraw(self, amount):
+        """定期預金は出金制限あり"""
+        print("警告: 定期預金は満期前の出金にペナルティがあります")
+        return super().withdraw(amount)
+
+
+# ============================================
+# 4. ユーティリティクラス
+# ============================================
+
+class Bank:
+    """銀行システム - シングルトンパターン風"""
+    
+    def __init__(self, name):
+        self.name = name
+        self.accounts = {}
+        self._next_account_number = 1001
+    
+    def create_account(self, account_type, owner, initial_deposit=0, **kwargs):
+        """新規口座開設"""
+        account_number = f"ACC{self._next_account_number}"
+        self._next_account_number += 1
+        
+        if account_type == "savings":
+            account = SavingsAccount(account_number, owner, initial_deposit)
+        elif account_type == "fixed":
+            term = kwargs.get('term_months', 12)
+            account = FixedDepositAccount(account_number, owner, initial_deposit, term)
+        else:
+            raise ValueError(f"不明な口座タイプ: {account_type}")
+        
+        self.accounts[account_number] = account
+        print(f"\n口座開設完了: {account_number} ({owner}様)")
+        return account
+    
+    def get_account(self, account_number):
+        """口座を取得"""
+        return self.accounts.get(account_number)
+    
+    def export_data(self, filename="bank_data.json"):
+        """データをJSON出力"""
+        data = {
+            "bank_name": self.name,
+            "accounts": []
+        }
+        for acc_num, acc in self.accounts.items():
+            data["accounts"].append({
+                "account_number": acc_num,
+                "owner": acc.owner,
+                "balance": acc.balance,
+                "transactions": acc._transactions
+            })
+        
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        print(f"\nデータを {filename} に保存しました")
+
+
+# ============================================
+# 5. メイン実行部分
+# ============================================
+
+def main():
+    """メインプログラム"""
+    
+    print("=" * 60)
+    print("Python銀行システム デモンストレーション".center(60))
+    print("=" * 60)
+    
+    # 銀行インスタンス作成
+    bank = Bank("Pythonみずほ銀行")
+    
+    # 口座開設
+    print("\n【口座開設】")
+    tanaka_savings = bank.create_account("savings", "田中太郎", 100000)
+    suzuki_fixed = bank.create_account("fixed", "鈴木花子", 500000, term_months=24)
+    
+    # 取引実行
+    print("\n【取引実行】")
+    try:
+        tanaka_savings.deposit(50000)
+        tanaka_savings.withdraw(30000)
+        tanaka_savings.add_interest()
+        
+        suzuki_fixed.deposit(100000)
+        suzuki_fixed.calculate_interest()
+        
+    except ValueError as e:
+        print(f"エラー: {e}")
+    
+    # 明細表示
+    print("\n【口座明細】")
+    tanaka_savings.get_statement()
+    suzuki_fixed.get_statement()
+    
+    # データエクスポート
+    print("\n【データエクスポート】")
+    bank.export_data()
+    
+    # プロパティアクセスのデモ
+    print("\n【プロパティアクセス】")
+    print(f"田中様の残高: ¥{tanaka_savings.balance:,}")
+    print(f"鈴木様の口座番号: {suzuki_fixed.account_number}")
+    
+    print("\n" + "=" * 60)
+    print("デモ完了！".center(60))
+    print("=" * 60)
+
+
+# ============================================
+# プログラム実行
+# ============================================
+
+if __name__ == "__main__":
+    main()
+
+
+# ============================================
+# Python新人研修 - 総合技術デモコード
+# ============================================
+
+import os
+import json
+from datetime import datetime, timedelta
+from typing import List, Dict, Optional
+from dataclasses import dataclass
+from enum import Enum
+
+
+# ============================================
+# 1. Enum（列挙型）- 定数管理
+# ============================================
+
+class EmployeeStatus(Enum):
+    """社員ステータス"""
+    ACTIVE = "在職中"
+    ON_LEAVE = "休職中"
+    RETIRED = "退職済み"
+
+
+class Department(Enum):
+    """部署"""
+    ENGINEERING = "エンジニアリング部"
+    SALES = "営業部"
+    HR = "人事部"
+    MARKETING = "マーケティング部"
+
+
+# ============================================
+# 2. dataclass - シンプルなデータクラス
+# ============================================
+
+@dataclass
+class Address:
+    """住所データクラス"""
+    postal_code: str
+    prefecture: str
+    city: str
+    street: str
+    
+    def full_address(self) -> str:
+        return f"〒{self.postal_code} {self.prefecture}{self.city}{self.street}"
+
+
+# ============================================
+# 3. 例外処理 - カスタム例外
+# ============================================
+
+class InvalidSalaryError(Exception):
+    """給与が不正な場合の例外"""
+    pass
+
+
+class EmployeeNotFoundError(Exception):
+    """社員が見つからない場合の例外"""
+    pass
+
+
+# ============================================
+# 4. クラス設計 - 社員管理システム
+# ============================================
+
+class Employee:
+    """社員クラス"""
+    
+    # クラス変数
+    _employee_count = 0
+    MIN_SALARY = 200000
+    MAX_SALARY = 10000000
+    
+    def __init__(self, name: str, department: Department, salary: int, address: Address):
+        if salary < self.MIN_SALARY or salary > self.MAX_SALARY:
+            raise InvalidSalaryError(f"給与は{self.MIN_SALARY:,}円〜{self.MAX_SALARY:,}円の範囲で設定してください")
+        
+        Employee._employee_count += 1
+        self._employee_id = f"EMP{Employee._employee_count:04d}"
+        self._name = name
+        self._department = department
+        self._salary = salary
+        self._address = address
+        self._status = EmployeeStatus.ACTIVE
+        self._hire_date = datetime.now()
+        self._performance_history: List[Dict] = []
+    
+    # プロパティ（ゲッター）
+    @property
+    def employee_id(self) -> str:
+        return self._employee_id
+    
+    @property
+    def name(self) -> str:
+        return self._name
+    
+    @property
+    def department(self) -> Department:
+        return self._department
+    
+    @property
+    def salary(self) -> int:
+        return self._salary
+    
+    @property
+    def status(self) -> EmployeeStatus:
+        return self._status
+    
+    # セッター（検証付き）
+    @salary.setter
+    def salary(self, value: int):
+        if value < self.MIN_SALARY or value > self.MAX_SALARY:
+            raise InvalidSalaryError(f"給与は{self.MIN_SALARY:,}円〜{self.MAX_SALARY:,}円の範囲で設定してください")
+        self._salary = value
+    
+    @status.setter
+    def status(self, value: EmployeeStatus):
+        self._status = value
+    
+    # メソッド
+    def add_performance_review(self, rating: int, comment: str):
+        """業績評価を追加"""
+        if not 1 <= rating <= 5:
+            raise ValueError("評価は1〜5の範囲で入力してください")
+        
+        review = {
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "rating": rating,
+            "comment": comment
+        }
+        self._performance_history.append(review)
+        print(f"✅ {self._name}さんの評価を追加しました (評価: {rating}/5)")
+    
+    def get_average_rating(self) -> Optional[float]:
+        """平均評価を取得"""
+        if not self._performance_history:
+            return None
+        ratings = [review["rating"] for review in self._performance_history]
+        return sum(ratings) / len(ratings)
+    
+    def give_raise(self, percentage: float):
+        """昇給処理"""
+        if percentage <= 0 or percentage > 50:
+            raise ValueError("昇給率は0〜50%の範囲で設定してください")
+        
+        old_salary = self._salary
+        increase = int(self._salary * (percentage / 100))
+        self._salary += increase
+        print(f"💰 {self._name}さんの給与を{percentage}%昇給しました")
+        print(f"   {old_salary:,}円 → {self._salary:,}円 (+{increase:,}円)")
+    
+    def get_years_of_service(self) -> float:
+        """勤続年数を取得"""
+        delta = datetime.now() - self._hire_date
+        return round(delta.days / 365.25, 1)
+    
+    def __str__(self) -> str:
+        """文字列表現"""
+        return f"{self._employee_id} - {self._name} ({self._department.value})"
+    
+    def __repr__(self) -> str:
+        """開発者向け表現"""
+        return f"Employee(id={self._employee_id}, name={self._name})"
+    
+    def to_dict(self) -> Dict:
+        """辞書型に変換（JSON出力用）"""
+        return {
+            "employee_id": self._employee_id,
+            "name": self._name,
+            "department": self._department.value,
+            "salary": self._salary,
+            "status": self._status.value,
+            "address": self._address.full_address(),
+            "hire_date": self._hire_date.strftime("%Y-%m-%d"),
+            "years_of_service": self.get_years_of_service(),
+            "average_rating": self.get_average_rating(),
+            "performance_history": self._performance_history
+        }
+
+
+# ============================================
+# 5. コンテキストマネージャー - with文
+# ============================================
+
+class EmployeeDatabase:
+    """社員データベース - with文で使用"""
+    
+    def __init__(self, filename: str):
+        self.filename = filename
+        self.employees: Dict[str, Employee] = {}
+    
+    def __enter__(self):
+        """with文の開始時"""
+        print(f"📂 データベース '{self.filename}' を開いています...")
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """with文の終了時（自動保存）"""
+        if exc_type is None:
+            self.save_to_file()
+            print(f"✅ データベースを保存して閉じました")
+        else:
+            print(f"❌ エラーが発生しました: {exc_val}")
+        return False
+    
+    def add_employee(self, employee: Employee):
+        """社員を追加"""
+        self.employees[employee.employee_id] = employee
+        print(f"➕ {employee.name}さんを登録しました (ID: {employee.employee_id})")
+    
+    def get_employee(self, employee_id: str) -> Employee:
+        """社員を取得"""
+        if employee_id not in self.employees:
+            raise EmployeeNotFoundError(f"社員ID {employee_id} が見つかりません")
+        return self.employees[employee_id]
+    
+    def search_by_department(self, department: Department) -> List[Employee]:
+        """部署で検索"""
+        return [emp for emp in self.employees.values() if emp.department == department]
+    
+    def get_salary_statistics(self) -> Dict:
+        """給与統計を取得"""
+        salaries = [emp.salary for emp in self.employees.values()]
+        if not salaries:
+            return {}
+        
+        return {
+            "平均給与": f"¥{sum(salaries) // len(salaries):,}",
+            "最高給与": f"¥{max(salaries):,}",
+            "最低給与": f"¥{min(salaries):,}",
+            "社員数": len(salaries)
+        }
+    
+    def save_to_file(self):
+        """ファイルに保存"""
+        data = {
+            "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "total_employees": len(self.employees),
+            "employees": [emp.to_dict() for emp in self.employees.values()]
+        }
+        
+        with open(self.filename, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+# ============================================
+# 6. デコレーター - 関数の拡張
+# ============================================
+
+def require_active_employee(func):
+    """アクティブな社員のみ操作可能にするデコレーター"""
+    def wrapper(self, employee: Employee, *args, **kwargs):
+        if employee.status != EmployeeStatus.ACTIVE:
+            print(f"⚠️  {employee.name}さんは{employee.status.value}のため、この操作はできません")
+            return None
+        return func(self, employee, *args, **kwargs)
+    return wrapper
+
+
+# ============================================
+# 7. 応用クラス - マネージャー
+# ============================================
+
+class HRManager:
+    """人事マネージャークラス"""
+    
+    def __init__(self, name: str):
+        self.name = name
+    
+    @require_active_employee
+    def conduct_review(self, employee: Employee, rating: int, comment: str):
+        """業績評価を実施"""
+        employee.add_performance_review(rating, comment)
+        
+        # 評価に応じた処理
+        if rating >= 4:
+            print(f"🌟 優秀な評価です！昇給を検討します")
+            employee.give_raise(5.0)
+    
+    @require_active_employee
+    def promote(self, employee: Employee, new_salary: int):
+        """昇進処理"""
+        old_salary = employee.salary
+        employee.salary = new_salary
+        print(f"🎉 {employee.name}さんを昇進させました！")
+        print(f"   給与: ¥{old_salary:,} → ¥{new_salary:,}")
+
+
+# ============================================
+# 8. リスト内包表記・ジェネレーター
+# ============================================
+
+def generate_report(employees: List[Employee]) -> str:
+    """レポート生成"""
+    lines = ["=" * 70, "社員一覧レポート".center(70), "=" * 70]
+    
+    # リスト内包表記
+    active_employees = [emp for emp in employees if emp.status == EmployeeStatus.ACTIVE]
+    
+    for emp in active_employees:
+        avg_rating = emp.get_average_rating()
+        rating_str = f"{avg_rating:.1f}/5" if avg_rating else "未評価"
+        
+        lines.append(f"{emp.employee_id} | {emp.name:10s} | {emp.department.value:20s} | ¥{emp.salary:>10,} | 評価: {rating_str}")
+    
+    lines.append("=" * 70)
+    return "\n".join(lines)
+
+
+# ============================================
+# 9. メイン実行部分
+# ============================================
+
+def main():
+    """メインプログラム"""
+    
+    print("=" * 70)
+    print("Python新人研修 - 社員管理システムデモ".center(70))
+    print("=" * 70)
+    print()
+    
+    try:
+        # コンテキストマネージャー使用（with文）
+        with EmployeeDatabase("employees.json") as db:
+            
+            # 社員データ作成
+            print("\n【1. 社員登録】")
+            employees = [
+                Employee("山田太郎", Department.ENGINEERING, 500000, 
+                        Address("100-0001", "東京都", "千代田区", "千代田1-1")),
+                Employee("佐藤花子", Department.SALES, 450000,
+                        Address("150-0001", "東京都", "渋谷区", "神宮前1-1")),
+                Employee("鈴木一郎", Department.HR, 480000,
+                        Address("160-0001", "東京都", "新宿区", "西新宿1-1")),
+            ]
+            
+            for emp in employees:
+                db.add_employee(emp)
+            
+            print("\n【2. 業績評価】")
+            hr_manager = HRManager("田中部長")
+            hr_manager.conduct_review(employees[0], 5, "優秀なパフォーマンス")
+            hr_manager.conduct_review(employees[0], 4, "良好な成果")
+            hr_manager.conduct_review(employees[1], 3, "標準的な成果")
+            
+            print("\n【3. 部署別検索】")
+            eng_employees = db.search_by_department(Department.ENGINEERING)
+            print(f"エンジニアリング部: {len(eng_employees)}名")
+            for emp in eng_employees:
+                print(f"  - {emp}")
+            
+            print("\n【4. 給与統計】")
+            stats = db.get_salary_statistics()
+            for key, value in stats.items():
+                print(f"  {key}: {value}")
+            
+            print("\n【5. 社員レポート】")
+            report = generate_report(list(db.employees.values()))
+            print(report)
+            
+            print("\n【6. エラーハンドリングのデモ】")
+            try:
+                # 不正な給与で社員作成を試みる
+                invalid_emp = Employee("テスト", Department.SALES, 100000,
+                                     Address("100-0001", "東京都", "千代田区", "千代田1-1"))
+            except InvalidSalaryError as e:
+                print(f"❌ エラー: {e}")
+            
+            print("\n【7. Type Hintingの活用】")
+            def calculate_bonus(salary: int, rating: Optional[float]) -> int:
+                """ボーナス計算（型ヒント付き）"""
+                if rating is None or rating < 3:
+                    return 0
+                return int(salary * 0.5 * (rating / 5))
+            
+            for emp in employees:
+                bonus = calculate_bonus(emp.salary, emp.get_average_rating())
+                if bonus > 0:
+                    print(f"  {emp.name}さんのボーナス: ¥{bonus:,}")
+            
+    except Exception as e:
+        print(f"\n❌ 予期しないエラー: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    print("\n" + "=" * 70)
+    print("デモ完了！employees.json を確認してください".center(70))
+    print("=" * 70)
+
+
+# ============================================
+# プログラム実行
+# ============================================
+
+if __name__ == "__main__":
+    main()
+
+
+ーーーーー
+# ============================================
+# __init__ とは何か？完全理解コード
+# ============================================
+
+print("=" * 60)
+print("__init__ の仕組みを理解しよう！")
+print("=" * 60)
+
+# ============================================
+# 1. 最もシンプルな例
+# ============================================
+
+print("\n【1. 基本: __init__がない場合】")
+
+class Dog1:
+    pass  # 何もない
+
+# 使ってみる
+dog = Dog1()
+print(f"犬オブジェクトを作成: {dog}")
+print("でも、名前も年齢も設定できない...")
+
+
+print("\n【2. __init__を追加: オブジェクト作成時に値を設定】")
+
+class Dog2:
+    # __init__ = 「初期化メソッド」
+    # オブジェクトが作られる時に「自動で」実行される特別な関数
+    def __init__(self, name, age):
+        print(f"  → __init__が呼ばれました！")
+        self.name = name  # 自分自身(self)に名前を保存
+        self.age = age    # 自分自身(self)に年齢を保存
+        print(f"  → {name}という犬を作成中...")
+
+# 使ってみる
+pochi = Dog2("ポチ", 3)  # ← この時に__init__が自動実行される！
+print(f"名前: {pochi.name}")
+print(f"年齢: {pochi.age}歳")
+
+tama = Dog2("タマ", 5)
+print(f"名前: {tama.name}")
+print(f"年齢: {tama.age}歳")
+
+
+# ============================================
+# 3. selfって何？
+# ============================================
+
+print("\n【3. selfの正体】")
+
+class Cat:
+    def __init__(self, name):
+        # self = 「今作っている、この猫自身」という意味
+        print(f"  self = {self}")  # selfの正体を表示
+        self.name = name
+
+mike = Cat("ミケ")
+print(f"mike = {mike}")
+print("↑ selfとmikeは同じオブジェクトを指している！")
+
+shiro = Cat("シロ")
+print(f"shiro = {shiro}")
+print("↑ それぞれ別のオブジェクト")
+
+
+# ============================================
+# 4. __init__でできること
+# ============================================
+
+print("\n【4. __init__でいろいろ初期化】")
+
+class Car:
+    def __init__(self, maker, model, year):
+        # 基本的な情報を保存
+        self.maker = maker
+        self.model = model
+        self.year = year
+        
+        # 初期値を自動設定
+        self.mileage = 0  # 走行距離は最初0km
+        self.is_running = False  # エンジン停止状態
+        
+        # 計算した値を保存
+        self.age = 2025 - year  # 車齢を計算
+        
+        print(f"✅ {maker} {model}を登録しました（{year}年式、{self.age}年落ち）")
+
+my_car = Car("トヨタ", "プリウス", 2020)
+print(f"走行距離: {my_car.mileage}km")
+print(f"エンジン: {'ON' if my_car.is_running else 'OFF'}")
+
+
+# ============================================
+# 5. デフォルト値を設定
+# ============================================
+
+print("\n【5. デフォルト値（省略可能な引数）】")
+
+class BankAccount:
+    def __init__(self, owner, balance=0):  # balance省略可能
+        self.owner = owner
+        self.balance = balance
+        print(f"💰 {owner}さんの口座を作成（残高: ¥{balance:,}）")
+
+# 残高を指定
+account1 = BankAccount("田中太郎", 100000)
+
+# 残高を省略（デフォルトの0になる）
+account2 = BankAccount("佐藤花子")
+
+
+# ============================================
+# 6. __init__で検証（バリデーション）
+# ============================================
+
+print("\n【6. __init__で不正な値をチェック】")
+
+class Person:
+    def __init__(self, name, age):
+        # 年齢チェック
+        if age < 0:
+            raise ValueError("年齢は0以上にしてください！")
+        if age > 150:
+            raise ValueError("年齢が不自然です！")
+        
+        self.name = name
+        self.age = age
+        print(f"👤 {name}さん（{age}歳）を登録")
+
+# 正常なケース
+person1 = Person("山田太郎", 25)
+
+# エラーケース
+try:
+    person2 = Person("佐藤次郎", -5)  # ← エラー発生！
+except ValueError as e:
+    print(f"❌ エラー: {e}")
+
+
+# ============================================
+# 7. __init__内で他のメソッドを呼ぶ
+# ============================================
+
+print("\n【7. __init__から別のメソッドを呼び出す】")
+
+class Robot:
+    def __init__(self, name):
+        self.name = name
+        self.battery = 100
+        
+        # 初期化時に挨拶メソッドを呼ぶ
+        self.greet()
+        self.check_battery()
+    
+    def greet(self):
+        print(f"🤖 こんにちは！{self.name}です！")
+    
+    def check_battery(self):
+        print(f"🔋 バッテリー残量: {self.battery}%")
+
+robot = Robot("アトム")
+
+
+# ============================================
+# 8. 実践例：RPGキャラクター
+# ============================================
+
+print("\n【8. 実践例: RPGキャラクター作成】")
+
+class Character:
+    def __init__(self, name, job, level=1):
+        # キャラクター情報
+        self.name = name
+        self.job = job
+        self.level = level
+        
+        # レベルに応じてステータスを自動計算
+        self.hp = 100 + (level * 10)
+        self.mp = 50 + (level * 5)
+        self.attack = 10 + (level * 2)
+        self.defense = 5 + level
+        
+        # 装備は初期状態で空
+        self.weapon = None
+        self.armor = None
+        
+        print(f"⚔️  キャラクター作成完了！")
+        self.show_status()
+    
+    def show_status(self):
+        print(f"   名前: {self.name}")
+        print(f"   職業: {self.job}")
+        print(f"   レベル: {self.level}")
+        print(f"   HP: {self.hp} / MP: {self.mp}")
+        print(f"   攻撃力: {self.attack} / 防御力: {self.defense}")
+
+# レベル1のキャラクター
+hero1 = Character("勇者アレックス", "戦士")
+
+print()
+
+# レベル10のキャラクター
+hero2 = Character("魔法使いベラ", "魔法使い", level=10)
+
+
+# ============================================
+# 9. まとめ
+# ============================================
+
+print("\n" + "=" * 60)
+print("【まとめ】")
+print("=" * 60)
+print("""
+__init__ とは：
+  ✓ オブジェクトを作る時に「自動で実行される」特別なメソッド
+  ✓ 「コンストラクタ」や「初期化メソッド」と呼ばれる
+  ✓ オブジェクトの初期状態を設定するために使う
+
+使い方：
+  class クラス名:
+      def __init__(self, 引数1, 引数2, ...):
+          self.属性1 = 引数1
+          self.属性2 = 引数2
+          # 初期化処理
+
+selfとは：
+  ✓ 「今作っているオブジェクト自身」を指す
+  ✓ 必ず第1引数に書く（名前は慣例でself）
+  ✓ self.xxxx で属性を保存
+
+ポイント：
+  ✓ デフォルト値で引数を省略可能にできる
+  ✓ バリデーション（検証）を入れられる
+  ✓ 計算した値を自動設定できる
+  ✓ 他のメソッドを呼び出せる
+""")
+
+print("=" * 60)
+print("このコードを実行して、__init__の動きを確認しよう！")
+print("=" * 60)
+
+ーーー
