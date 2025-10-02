@@ -1,0 +1,594 @@
+# 新人エンジニア向け研修：Python静的解析ツール完全ガイド
+
+## 静的解析とは？
+
+**静的解析**（Static Analysis）= プログラムを**実行せずに**コードを分析すること
+
+- コードの**バグ**を見つける
+- **コーディング規約違反**をチェック
+- **型の不整合**を検出
+- **潜在的な問題**を早期発見
+
+**動的解析**との違い：
+- **静的解析**: コードを読んで分析（実行しない）
+- **動的解析**: プログラムを実行して分析（テストなど）
+
+## 主要な静的解析ツール
+
+### 1. **Flake8** ⭐⭐⭐⭐⭐
+**PEP 8準拠チェック + 基本的なエラー検出**
+
+#### インストール
+```bash
+pip install flake8
+```
+
+#### 使い方
+```bash
+# 単一ファイルをチェック
+flake8 app.py
+
+# ディレクトリ全体をチェック
+flake8 daifuku_shop/
+
+# 結果の例
+app.py:5:1: E302 expected 2 blank lines, found 1
+app.py:10:80: E501 line too long (85 > 79 characters)
+app.py:15:1: F401 'os' imported but unused
+```
+
+#### 設定ファイル（.flake8 または setup.cfg）
+```ini
+[flake8]
+max-line-length = 88
+exclude = 
+    .git,
+    __pycache__,
+    venv,
+    migrations
+ignore = 
+    E203,  # whitespace before ':'
+    W503   # line break before binary operator
+```
+
+#### よくあるエラーコード
+```python
+# E302: 関数定義の前に2行空けていない
+def first_function():
+    pass
+def second_function():  # ← エラー！
+    pass
+
+# E501: 行が長すぎる（79文字超）
+very_long_variable_name = some_function(arg1, arg2, arg3, arg4, arg5)  # ← エラー！
+
+# F401: インポートしたが未使用
+import os  # ← 使っていないのでエラー！
+
+# F841: 変数を定義したが未使用
+def process():
+    result = calculate()  # ← 使っていないのでエラー！
+    return 42
+```
+
+### 2. **Pylint** ⭐⭐⭐⭐⭐
+**最も厳格で詳細なチェッカー**
+
+#### インストール
+```bash
+pip install pylint
+```
+
+#### 使い方
+```bash
+# チェック実行
+pylint app.py
+
+# スコア付きで表示
+pylint daifuku_shop/
+
+# 結果の例
+************* Module app
+app.py:1:0: C0114: Missing module docstring (missing-module-docstring)
+app.py:5:0: C0116: Missing function or method docstring (missing-function-docstring)
+app.py:10:4: W0612: Unused variable 'result' (unused-variable)
+
+-----------------------------------
+Your code has been rated at 7.50/10
+```
+
+#### 設定ファイル（.pylintrc）
+```ini
+[MASTER]
+ignore=migrations,tests
+
+[FORMAT]
+max-line-length=88
+
+[MESSAGES CONTROL]
+disable=
+    missing-docstring,
+    too-few-public-methods,
+    invalid-name
+
+[DESIGN]
+max-args=7
+max-locals=15
+```
+
+#### Pylintの評価
+```python
+# 良いコード例（高スコア）
+"""顧客管理モジュール"""
+
+
+class CustomerManager:
+    """顧客管理クラス"""
+    
+    def __init__(self):
+        """初期化"""
+        self.customers = []
+    
+    def add_customer(self, name: str, email: str) -> None:
+        """
+        顧客を追加
+        
+        Args:
+            name: 顧客名
+            email: メールアドレス
+        """
+        self.customers.append({"name": name, "email": email})
+
+
+# 悪いコード例（低スコア）
+class cm:  # 短すぎる名前
+    def __init__(self):
+        self.c = []  # 意味不明な変数名
+    
+    def add(self, n, e):  # 引数名が短すぎ、docstringなし
+        self.c.append({"name": n, "email": e})
+```
+
+### 3. **Mypy** ⭐⭐⭐⭐⭐
+**型チェック専門ツール**
+
+#### インストール
+```bash
+pip install mypy
+```
+
+#### 使い方
+```bash
+# 型チェック実行
+mypy app.py
+
+# 結果の例
+app.py:5: error: Argument 1 to "calculate" has incompatible type "str"; expected "int"
+app.py:10: error: Incompatible return value type (got "None", expected "str")
+```
+
+#### 型チェックの例
+```python
+# 型ヒント付きコード
+def calculate_total(price: int, quantity: int) -> int:
+    """合計金額を計算"""
+    return price * quantity
+
+
+def get_customer_name(customer_id: int) -> str:
+    """顧客名を取得"""
+    # データベースから取得する想定
+    return "田中太郎"
+
+
+# エラー例
+result = calculate_total("1000", 5)  # エラー！strをintに渡している
+# error: Argument 1 has incompatible type "str"; expected "int"
+
+name: int = get_customer_name(123)  # エラー！戻り値はstr
+# error: Incompatible types in assignment (expression has type "str", variable has type "int")
+
+
+# 正しい例
+result = calculate_total(1000, 5)  # OK
+name: str = get_customer_name(123)  # OK
+```
+
+#### 設定ファイル（mypy.ini または pyproject.toml）
+```ini
+[mypy]
+python_version = 3.10
+warn_return_any = True
+warn_unused_configs = True
+disallow_untyped_defs = True
+
+[mypy-tests.*]
+ignore_errors = True
+```
+
+### 4. **Black** ⭐⭐⭐⭐⭐
+**自動フォーマッター（opinionated）**
+
+#### インストール
+```bash
+pip install black
+```
+
+#### 使い方
+```bash
+# ファイルを自動整形
+black app.py
+
+# ディレクトリ全体を整形
+black daifuku_shop/
+
+# チェックのみ（変更しない）
+black --check app.py
+
+# 差分表示
+black --diff app.py
+```
+
+#### Blackの効果
+```python
+# 整形前
+def calculate_total(price,quantity,tax_rate=0.1):
+    total=price*quantity
+    return total*(1+tax_rate)
+
+# 整形後（Blackが自動変換）
+def calculate_total(price, quantity, tax_rate=0.1):
+    total = price * quantity
+    return total * (1 + tax_rate)
+```
+
+#### 設定ファイル（pyproject.toml）
+```toml
+[tool.black]
+line-length = 88
+target-version = ['py310']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | migrations
+)/
+'''
+```
+
+### 5. **isort** ⭐⭐⭐⭐
+**import文の自動整理**
+
+#### インストール
+```bash
+pip install isort
+```
+
+#### 使い方
+```bash
+# import文を整理
+isort app.py
+
+# チェックのみ
+isort --check-only app.py
+```
+
+#### isortの効果
+```python
+# 整理前（バラバラ）
+from flask import Flask
+import os
+from datetime import datetime
+import sys
+from my_app.models import Order
+import json
+
+# 整理後（PEP 8準拠）
+import json
+import os
+import sys
+from datetime import datetime
+
+from flask import Flask
+
+from my_app.models import Order
+```
+
+#### 設定ファイル（pyproject.toml）
+```toml
+[tool.isort]
+profile = "black"
+line_length = 88
+multi_line_output = 3
+include_trailing_comma = true
+```
+
+### 6. **Bandit** ⭐⭐⭐⭐
+**セキュリティ脆弱性チェック**
+
+#### インストール
+```bash
+pip install bandit
+```
+
+#### 使い方
+```bash
+# セキュリティチェック
+bandit -r daifuku_shop/
+
+# 結果の例
+[B105:hardcoded_password_string] Possible hardcoded password: 'admin123'
+[B201:flask_debug_true] A Flask app appears to be run with debug=True
+```
+
+#### 検出される問題例
+```python
+# Bad - セキュリティ問題あり
+password = "admin123"  # ハードコードされたパスワード
+app.run(debug=True)  # 本番環境でdebug=True
+
+import pickle
+data = pickle.loads(user_input)  # 危険な入力
+
+# Good - 改善版
+import os
+password = os.environ.get("DB_PASSWORD")  # 環境変数から取得
+app.run(debug=False)
+
+import json
+data = json.loads(user_input)  # より安全
+```
+
+### 7. **Ruff** ⭐⭐⭐⭐⭐
+**超高速な新世代リンター（FlakeとPylintの代替）**
+
+#### インストール
+```bash
+pip install ruff
+```
+
+#### 使い方
+```bash
+# チェック実行
+ruff check .
+
+# 自動修正
+ruff check --fix .
+
+# 結果の例
+app.py:5:1: F401 [*] `os` imported but unused
+app.py:10:80: E501 Line too long (85 > 79)
+```
+
+#### 設定ファイル（pyproject.toml）
+```toml
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E203", "E501"]
+```
+
+## ツールの組み合わせ例
+
+### パターン1: 基本セット（初心者向け）
+```bash
+pip install flake8 black isort
+```
+
+```bash
+# 実行順序
+isort .          # import整理
+black .          # コード整形
+flake8 .         # PEP 8チェック
+```
+
+### パターン2: 厳格セット（本格開発）
+```bash
+pip install ruff black isort mypy bandit
+```
+
+```bash
+# 実行順序
+isort .          # import整理
+black .          # コード整形
+ruff check .     # 高速リント
+mypy .           # 型チェック
+bandit -r .      # セキュリティチェック
+```
+
+### パターン3: モダンセット（最新）
+```bash
+pip install ruff mypy
+```
+
+```bash
+# Ruffだけで多くをカバー
+ruff check --fix .
+ruff format .
+mypy .
+```
+
+## pre-commitで自動化
+
+### pre-commitとは
+**Gitコミット前に自動でチェック**を実行するツール
+
+#### インストール
+```bash
+pip install pre-commit
+```
+
+#### 設定ファイル（.pre-commit-config.yaml）
+```yaml
+repos:
+  - repo: https://github.com/psf/black
+    rev: 23.10.0
+    hooks:
+      - id: black
+        language_version: python3.10
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.1.0
+    hooks:
+      - id: flake8
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.6.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-requests]
+```
+
+#### 有効化
+```bash
+# pre-commit設定
+pre-commit install
+
+# 手動実行
+pre-commit run --all-files
+```
+
+#### 動作イメージ
+```bash
+$ git commit -m "新機能追加"
+
+black....................................................................Passed
+isort....................................................................Passed
+flake8...................................................................Failed
+- hook id: flake8
+- exit code: 1
+
+app.py:10:80: E501 line too long (85 > 79 characters)
+
+# コミット失敗！修正してから再度コミット
+```
+
+## VS Code統合
+
+### settings.json
+```json
+{
+  "python.linting.enabled": true,
+  "python.linting.pylintEnabled": false,
+  "python.linting.flake8Enabled": true,
+  "python.linting.mypyEnabled": true,
+  
+  "python.formatting.provider": "black",
+  
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": true
+    }
+  },
+  
+  "python.sortImports.args": [
+    "--profile", "black"
+  ]
+}
+```
+
+## ツール比較表
+
+| ツール | 目的 | 速度 | 厳格さ | 自動修正 |
+|--------|------|------|--------|----------|
+| **Flake8** | PEP 8チェック | 速い | 中 | ❌ |
+| **Pylint** | 総合チェック | 遅い | 高 | ❌ |
+| **Mypy** | 型チェック | 中 | 高 | ❌ |
+| **Black** | コード整形 | 速い | - | ✅ |
+| **isort** | import整理 | 速い | - | ✅ |
+| **Bandit** | セキュリティ | 速い | 中 | ❌ |
+| **Ruff** | 総合リント | 超速 | 中〜高 | ✅ |
+
+## 実践例
+
+### プロジェクト構成
+```
+daifuku_shop/
+├── .flake8
+├── .pylintrc
+├── mypy.ini
+├── pyproject.toml
+├── .pre-commit-config.yaml
+├── daifuku_shop/
+│   ├── __init__.py
+│   ├── models.py
+│   └── services.py
+└── tests/
+    └── test_models.py
+```
+
+### pyproject.toml（統合設定）
+```toml
+[tool.black]
+line-length = 88
+target-version = ['py310']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I", "N", "W", "B"]
+```
+
+### Makefile（便利コマンド集）
+```makefile
+.PHONY: format lint type-check security check
+
+format:
+	isort .
+	black .
+
+lint:
+	ruff check .
+
+type-check:
+	mypy .
+
+security:
+	bandit -r daifuku_shop/
+
+check: format lint type-check security
+	@echo "All checks passed!"
+```
+
+### 実行
+```bash
+# すべてのチェックを一度に実行
+make check
+```
+
+## まとめ
+
+### 新人エンジニアが最初に導入すべきツール
+
+1. **Black** - コード整形（自動）
+2. **isort** - import整理（自動）
+3. **Flake8 / Ruff** - PEP 8チェック
+4. **Mypy** - 型チェック（型ヒント使用時）
+
+### ベストプラクティス
+
+✅ **早い段階から導入** - 後から直すのは大変  
+✅ **CI/CDに組み込む** - 自動チェック  
+✅ **pre-commitで自動化** - コミット前チェック  
+✅ **チーム全体で統一** - 設定ファイルを共有  
+✅ **段階的に厳しく** - 最初は緩め、徐々に厳格化  
+
+静的解析ツールを使うことで、バグを事前に防ぎ、コード品質を保てます！
