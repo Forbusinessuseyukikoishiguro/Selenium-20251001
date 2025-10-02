@@ -1,0 +1,975 @@
+# 新人エンジニア向け研修：オブジェクト設計・ゲッター/セッター・関数化
+
+## 目次
+1. オブジェクト指向設計の基本原則
+2. ゲッター/セッター（プロパティ）
+3. 関数化（関数分割）のベストプラクティス
+4. SOLID原則
+5. デザインパターン入門
+6. 実践的な設計例
+
+---
+
+## 1. オブジェクト指向設計の基本原則
+
+### カプセル化（Encapsulation）
+
+**データと処理をひとまとめにして、内部実装を隠す**
+
+```python
+# Bad - カプセル化なし
+class BankAccount:
+    def __init__(self):
+        self.balance = 0  # 直接アクセス可能
+
+
+account = BankAccount()
+account.balance = -1000  # 不正な値を設定できてしまう！
+
+
+# Good - カプセル化あり
+class BankAccount:
+    def __init__(self):
+        self.__balance = 0  # private変数
+    
+    def deposit(self, amount):
+        """入金（バリデーション付き）"""
+        if amount <= 0:
+            raise ValueError("入金額は正の値である必要があります")
+        self.__balance += amount
+    
+    def withdraw(self, amount):
+        """出金（バリデーション付き）"""
+        if amount <= 0:
+            raise ValueError("出金額は正の値である必要があります")
+        if amount > self.__balance:
+            raise ValueError("残高不足です")
+        self.__balance -= amount
+    
+    def get_balance(self):
+        """残高照会"""
+        return self.__balance
+
+
+# 使用
+account = BankAccount()
+account.deposit(1000)
+account.withdraw(300)
+print(account.get_balance())  # 700
+
+# 直接アクセスは不可
+# account.__balance = -1000  # AttributeError
+```
+
+### 抽象化（Abstraction）
+
+**複雑な実装の詳細を隠し、必要な機能だけを公開**
+
+```python
+from abc import ABC, abstractmethod
+
+# 抽象クラス - インターフェースを定義
+class DataStore(ABC):
+    """データストアの抽象クラス"""
+    
+    @abstractmethod
+    def save(self, key: str, data: dict) -> None:
+        """データを保存"""
+        pass
+    
+    @abstractmethod
+    def load(self, key: str) -> dict:
+        """データを読み込み"""
+        pass
+    
+    @abstractmethod
+    def delete(self, key: str) -> None:
+        """データを削除"""
+        pass
+
+
+# 具体的な実装1 - ファイルストレージ
+class FileStore(DataStore):
+    def __init__(self, directory: str):
+        self.directory = directory
+    
+    def save(self, key: str, data: dict) -> None:
+        """ファイルに保存"""
+        import json
+        filepath = f"{self.directory}/{key}.json"
+        with open(filepath, 'w') as f:
+            json.dump(data, f)
+    
+    def load(self, key: str) -> dict:
+        """ファイルから読み込み"""
+        import json
+        filepath = f"{self.directory}/{key}.json"
+        with open(filepath, 'r') as f:
+            return json.load(f)
+    
+    def delete(self, key: str) -> None:
+        """ファイルを削除"""
+        import os
+        filepath = f"{self.directory}/{key}.json"
+        os.remove(filepath)
+
+
+# 具体的な実装2 - メモリストレージ
+class MemoryStore(DataStore):
+    def __init__(self):
+        self._data = {}
+    
+    def save(self, key: str, data: dict) -> None:
+        """メモリに保存"""
+        self._data[key] = data
+    
+    def load(self, key: str) -> dict:
+        """メモリから読み込み"""
+        return self._data.get(key, {})
+    
+    def delete(self, key: str) -> None:
+        """メモリから削除"""
+        if key in self._data:
+            del self._data[key]
+
+
+# 使用側は実装の詳細を知らなくてよい
+def process_data(store: DataStore):
+    """どのストレージでも同じように使える"""
+    data = {"name": "田中", "age": 30}
+    
+    store.save("user_001", data)
+    loaded = store.load("user_001")
+    print(loaded)
+    store.delete("user_001")
+
+
+# どちらの実装でも動く
+file_store = FileStore("./data")
+memory_store = MemoryStore()
+
+process_data(file_store)    # ファイルストレージ使用
+process_data(memory_store)  # メモリストレージ使用
+```
+
+---
+
+## 2. ゲッター/セッター（プロパティ）
+
+### なぜゲッター/セッターが必要？
+
+1. **バリデーション** - 不正な値の設定を防ぐ
+2. **カプセル化** - 内部実装の変更に強い
+3. **副作用の追加** - ログ記録、通知など
+4. **計算プロパティ** - 動的に値を生成
+
+### Pythonらしくない書き方（Java/C++スタイル）
+
+```python
+# Bad - Pythonらしくない
+class Product:
+    def __init__(self, name, price):
+        self.__name = name
+        self.__price = price
+    
+    def get_name(self):
+        return self.__name
+    
+    def set_name(self, name):
+        self.__name = name
+    
+    def get_price(self):
+        return self.__price
+    
+    def set_price(self, price):
+        if price < 0:
+            raise ValueError("価格は0以上である必要があります")
+        self.__price = price
+
+
+# 使いにくい
+product = Product("大福", 200)
+print(product.get_name())  # ゲッターメソッド呼び出し
+product.set_price(250)     # セッターメソッド呼び出し
+```
+
+### Pythonらしい書き方（@property）
+
+```python
+# Good - Pythonらしい
+class Product:
+    def __init__(self, name: str, price: int):
+        self._name = name
+        self._price = price
+    
+    @property
+    def name(self) -> str:
+        """商品名を取得（読み取り専用）"""
+        return self._name
+    
+    @property
+    def price(self) -> int:
+        """価格を取得"""
+        return self._price
+    
+    @price.setter
+    def price(self, value: int) -> None:
+        """価格を設定（バリデーション付き）"""
+        if value < 0:
+            raise ValueError("価格は0以上である必要があります")
+        self._price = value
+
+
+# 自然な使い方
+product = Product("大福", 200)
+print(product.name)   # プロパティとして取得
+print(product.price)  # プロパティとして取得
+
+product.price = 250   # プロパティとして設定
+# product.price = -100  # ValueError
+
+# 読み取り専用プロパティは変更不可
+# product.name = "新商品"  # AttributeError
+```
+
+### プロパティの実践パターン
+
+#### パターン1: 読み取り専用プロパティ
+
+```python
+class Order:
+    def __init__(self, order_id: str):
+        self._order_id = order_id
+        self._items = []
+        self._created_at = datetime.now()
+    
+    @property
+    def order_id(self) -> str:
+        """注文ID（読み取り専用）"""
+        return self._order_id
+    
+    @property
+    def created_at(self) -> datetime:
+        """作成日時（読み取り専用）"""
+        return self._created_at
+    
+    @property
+    def item_count(self) -> int:
+        """商品数（計算プロパティ）"""
+        return len(self._items)
+
+
+order = Order("ORD-001")
+print(order.order_id)    # 読み取りOK
+print(order.item_count)  # 計算結果を取得
+
+# 変更は不可
+# order.order_id = "ORD-002"  # AttributeError
+```
+
+#### パターン2: バリデーション付きプロパティ
+
+```python
+class User:
+    def __init__(self, username: str, age: int):
+        self._username = username
+        self._age = age
+        self._email = None
+    
+    @property
+    def username(self) -> str:
+        return self._username
+    
+    @username.setter
+    def username(self, value: str) -> None:
+        """ユーザー名（3文字以上20文字以下）"""
+        if not isinstance(value, str):
+            raise TypeError("ユーザー名は文字列である必要があります")
+        if not 3 <= len(value) <= 20:
+            raise ValueError("ユーザー名は3～20文字である必要があります")
+        self._username = value
+    
+    @property
+    def age(self) -> int:
+        return self._age
+    
+    @age.setter
+    def age(self, value: int) -> None:
+        """年齢（0～150）"""
+        if not isinstance(value, int):
+            raise TypeError("年齢は整数である必要があります")
+        if not 0 <= value <= 150:
+            raise ValueError("年齢は0～150の範囲である必要があります")
+        self._age = value
+    
+    @property
+    def email(self) -> str:
+        return self._email
+    
+    @email.setter
+    def email(self, value: str) -> None:
+        """メールアドレス（形式チェック）"""
+        if value is None:
+            self._email = None
+            return
+        
+        if "@" not in value or "." not in value:
+            raise ValueError("無効なメールアドレス形式です")
+        self._email = value
+
+
+# 使用例
+user = User("tanaka", 25)
+
+# バリデーションが働く
+# user.username = "ab"  # ValueError（短すぎ）
+# user.age = 200        # ValueError（大きすぎ）
+# user.email = "invalid"  # ValueError（@がない）
+
+user.email = "tanaka@example.com"  # OK
+```
+
+#### パターン3: 計算プロパティ
+
+```python
+class Rectangle:
+    def __init__(self, width: float, height: float):
+        self._width = width
+        self._height = height
+    
+    @property
+    def width(self) -> float:
+        return self._width
+    
+    @width.setter
+    def width(self, value: float) -> None:
+        if value <= 0:
+            raise ValueError("幅は正の値である必要があります")
+        self._width = value
+    
+    @property
+    def height(self) -> float:
+        return self._height
+    
+    @height.setter
+    def height(self, value: float) -> None:
+        if value <= 0:
+            raise ValueError("高さは正の値である必要があります")
+        self._height = value
+    
+    @property
+    def area(self) -> float:
+        """面積（計算プロパティ）"""
+        return self._width * self._height
+    
+    @property
+    def perimeter(self) -> float:
+        """周囲の長さ（計算プロパティ）"""
+        return 2 * (self._width + self._height)
+    
+    @property
+    def diagonal(self) -> float:
+        """対角線の長さ（計算プロパティ）"""
+        return (self._width ** 2 + self._height ** 2) ** 0.5
+
+
+# 使用例
+rect = Rectangle(10, 20)
+
+print(f"幅: {rect.width}")
+print(f"高さ: {rect.height}")
+print(f"面積: {rect.area}")        # 200（計算される）
+print(f"周囲: {rect.perimeter}")   # 60（計算される）
+print(f"対角線: {rect.diagonal}")  # 22.36...（計算される）
+
+# 幅を変更すると、面積なども自動的に再計算される
+rect.width = 15
+print(f"新しい面積: {rect.area}")  # 300
+```
+
+#### パターン4: 遅延評価（Lazy Evaluation）
+
+```python
+class DataAnalyzer:
+    def __init__(self, filepath: str):
+        self._filepath = filepath
+        self._data = None  # まだ読み込んでいない
+        self._statistics = None
+    
+    @property
+    def data(self):
+        """データ（初回アクセス時に読み込み）"""
+        if self._data is None:
+            print(f"データを読み込み中: {self._filepath}")
+            # 実際にはファイルから読み込む
+            self._data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        return self._data
+    
+    @property
+    def statistics(self) -> dict:
+        """統計情報（初回アクセス時に計算）"""
+        if self._statistics is None:
+            print("統計情報を計算中...")
+            data = self.data
+            self._statistics = {
+                "count": len(data),
+                "sum": sum(data),
+                "average": sum(data) / len(data),
+                "min": min(data),
+                "max": max(data)
+            }
+        return self._statistics
+
+
+# 使用例
+analyzer = DataAnalyzer("data.csv")
+
+# この時点ではまだデータを読み込んでいない
+print("アナライザー作成完了")
+
+# 初回アクセス時に読み込み
+print(analyzer.data)  # "データを読み込み中: data.csv" と表示
+
+# 2回目以降は読み込まない（キャッシュされる）
+print(analyzer.data)  # メッセージなし
+
+# 統計情報も遅延評価
+print(analyzer.statistics)  # "統計情報を計算中..." と表示
+print(analyzer.statistics)  # メッセージなし（キャッシュ）
+```
+
+#### パターン5: プロパティ削除
+
+```python
+class CachedData:
+    def __init__(self):
+        self._cache = None
+    
+    @property
+    def cache(self):
+        """キャッシュデータ"""
+        if self._cache is None:
+            print("キャッシュを作成中...")
+            self._cache = {"data": "重い処理の結果"}
+        return self._cache
+    
+    @cache.setter
+    def cache(self, value):
+        """キャッシュを設定"""
+        self._cache = value
+    
+    @cache.deleter
+    def cache(self):
+        """キャッシュをクリア"""
+        print("キャッシュをクリアしました")
+        self._cache = None
+
+
+# 使用例
+cached = CachedData()
+
+print(cached.cache)  # キャッシュを作成中...
+print(cached.cache)  # 既存のキャッシュを使用
+
+# キャッシュをクリア
+del cached.cache  # "キャッシュをクリアしました"
+
+# 再度アクセスすると再作成
+print(cached.cache)  # キャッシュを作成中...
+```
+
+---
+
+## 3. 関数化（関数分割）のベストプラクティス
+
+### 単一責任の原則（Single Responsibility Principle）
+
+**1つの関数は1つのことだけをする**
+
+```python
+# Bad - 1つの関数で複数のことをしている
+def process_order(order_data):
+    # 1. バリデーション
+    if not order_data.get("customer_name"):
+        raise ValueError("顧客名が必要です")
+    if not order_data.get("items"):
+        raise ValueError("商品が必要です")
+    
+    # 2. 在庫チェック
+    for item in order_data["items"]:
+        # 在庫確認処理...
+        pass
+    
+    # 3. 価格計算
+    total = 0
+    for item in order_data["items"]:
+        total += item["price"] * item["quantity"]
+    
+    # 4. 税金計算
+    tax = total * 0.1
+    final_total = total + tax
+    
+    # 5. データベース保存
+    # DB保存処理...
+    
+    # 6. メール送信
+    # メール送信処理...
+    
+    return final_total
+
+
+# Good - 関数を分割
+def validate_order_data(order_data: dict) -> None:
+    """注文データのバリデーション"""
+    if not order_data.get("customer_name"):
+        raise ValueError("顧客名が必要です")
+    if not order_data.get("items"):
+        raise ValueError("商品が必要です")
+
+
+def check_inventory(items: list) -> bool:
+    """在庫をチェック"""
+    for item in items:
+        # 在庫確認処理...
+        if not has_sufficient_stock(item):
+            return False
+    return True
+
+
+def calculate_subtotal(items: list) -> float:
+    """小計を計算"""
+    total = 0
+    for item in items:
+        total += item["price"] * item["quantity"]
+    return total
+
+
+def calculate_tax(amount: float, tax_rate: float = 0.1) -> float:
+    """税金を計算"""
+    return amount * tax_rate
+
+
+def save_order_to_db(order_data: dict, total: float) -> int:
+    """注文をデータベースに保存"""
+    # DB保存処理...
+    return order_id
+
+
+def send_confirmation_email(customer_email: str, order_id: int) -> None:
+    """確認メールを送信"""
+    # メール送信処理...
+    pass
+
+
+def process_order(order_data: dict) -> dict:
+    """
+    注文を処理（オーケストレーション）
+    
+    各機能を呼び出して注文処理全体を調整する
+    """
+    # バリデーション
+    validate_order_data(order_data)
+    
+    # 在庫チェック
+    if not check_inventory(order_data["items"]):
+        raise ValueError("在庫不足の商品があります")
+    
+    # 価格計算
+    subtotal = calculate_subtotal(order_data["items"])
+    tax = calculate_tax(subtotal)
+    final_total = subtotal + tax
+    
+    # 保存
+    order_id = save_order_to_db(order_data, final_total)
+    
+    # メール送信
+    send_confirmation_email(order_data["customer_email"], order_id)
+    
+    return {
+        "order_id": order_id,
+        "subtotal": subtotal,
+        "tax": tax,
+        "total": final_total
+    }
+```
+
+### 関数の適切なサイズ
+
+```python
+# ガイドライン
+# - 1関数は20～30行以内が理想
+# - 画面1つに収まる程度
+# - ネストは3階層まで
+
+# Bad - 長すぎる、ネストが深い
+def complex_function(data):
+    result = []
+    for item in data:
+        if item["type"] == "A":
+            for sub_item in item["children"]:
+                if sub_item["active"]:
+                    for detail in sub_item["details"]:
+                        if detail["score"] > 50:
+                            # 処理...
+                            result.append(detail)
+    return result
+
+
+# Good - 関数を分割してネストを減らす
+def is_valid_detail(detail: dict) -> bool:
+    """詳細が有効かチェック"""
+    return detail["score"] > 50
+
+
+def extract_valid_details(sub_item: dict) -> list:
+    """有効な詳細を抽出"""
+    if not sub_item["active"]:
+        return []
+    
+    return [
+        detail for detail in sub_item["details"]
+        if is_valid_detail(detail)
+    ]
+
+
+def process_type_a_items(items: list) -> list:
+    """タイプAのアイテムを処理"""
+    result = []
+    
+    for item in items:
+        for sub_item in item.get("children", []):
+            valid_details = extract_valid_details(sub_item)
+            result.extend(valid_details)
+    
+    return result
+
+
+def complex_function(data: list) -> list:
+    """データを処理"""
+    type_a_items = [item for item in data if item["type"] == "A"]
+    return process_type_a_items(type_a_items)
+```
+
+### 関数名の付け方
+
+```python
+# 動詞で始める
+def calculate_total(items):
+    """合計を計算"""
+    pass
+
+def validate_email(email):
+    """メールアドレスを検証"""
+    pass
+
+def send_notification(user, message):
+    """通知を送信"""
+    pass
+
+def is_valid_password(password):
+    """パスワードが有効か判定（boolを返す）"""
+    pass
+
+def has_permission(user, resource):
+    """権限を持っているか判定（boolを返す）"""
+    pass
+
+def get_user_by_id(user_id):
+    """ユーザーを取得"""
+    pass
+
+
+# Bad - 曖昧な名前
+def do_stuff():
+    pass
+
+def handle_data():
+    pass
+
+def process():
+    pass
+
+
+# Good - 具体的な名前
+def sanitize_user_input():
+    pass
+
+def format_date_for_display():
+    pass
+
+def convert_celsius_to_fahrenheit():
+    pass
+```
+
+### 引数の数
+
+```python
+# ガイドライン: 引数は3つまでが理想
+
+# Bad - 引数が多すぎる
+def create_user(name, email, password, age, phone, address, city, postal_code, country):
+    pass
+
+
+# Good - オブジェクトにまとめる
+from dataclasses import dataclass
+
+@dataclass
+class UserData:
+    name: str
+    email: str
+    password: str
+    age: int
+    phone: str
+    address: str
+    city: str
+    postal_code: str
+    country: str
+
+
+def create_user(user_data: UserData):
+    """ユーザーを作成"""
+    # user_data.nameなどでアクセス
+    pass
+
+
+# または辞書を使う
+def create_user(user_info: dict):
+    """ユーザーを作成"""
+    name = user_info["name"]
+    email = user_info["email"]
+    # ...
+```
+
+### デフォルト引数の注意点
+
+```python
+# Bad - ミュータブルなデフォルト引数
+def add_item(item, items=[]):  # 危険！
+    items.append(item)
+    return items
+
+
+# 問題が発生
+list1 = add_item("A")  # ["A"]
+list2 = add_item("B")  # ["A", "B"]  ← 前の呼び出しの影響を受ける！
+
+
+# Good - Noneを使う
+def add_item(item, items=None):
+    if items is None:
+        items = []
+    items.append(item)
+    return items
+
+
+# 正しく動作
+list1 = add_item("A")  # ["A"]
+list2 = add_item("B")  # ["B"]
+```
+
+### 純粋関数（Pure Function）
+
+**副作用がなく、同じ入力には常に同じ出力を返す関数**
+
+```python
+# Good - 純粋関数
+def calculate_discount(price: float, discount_rate: float) -> float:
+    """
+    割引後の価格を計算
+    
+    副作用なし、外部状態に依存しない
+    """
+    return price * (1 - discount_rate)
+
+
+# テストしやすい
+assert calculate_discount(1000, 0.1) == 900
+assert calculate_discount(1000, 0.1) == 900  # 常に同じ結果
+
+
+# Bad - 純粋でない関数（副作用あり）
+total_discount = 0  # グローバル変数
+
+def calculate_discount_impure(price: float, discount_rate: float) -> float:
+    """
+    副作用あり（グローバル変数を変更）
+    """
+    global total_discount
+    discount = price * discount_rate
+    total_discount += discount  # 副作用！
+    return price - discount
+
+
+# テストしにくい、予測しにくい
+result1 = calculate_discount_impure(1000, 0.1)
+result2 = calculate_discount_impure(1000, 0.1)
+# total_discountの値が毎回変わる
+```
+
+---
+
+## 4. SOLID原則
+
+### S - Single Responsibility Principle（単一責任の原則）
+
+**1つのクラスは1つの責任だけを持つべき**
+
+```python
+# Bad - 複数の責任
+class User:
+    def __init__(self, name, email):
+        self.name = name
+        self.email = email
+    
+    def save_to_database(self):
+        """データベース保存（責任1）"""
+        pass
+    
+    def send_welcome_email(self):
+        """メール送信（責任2）"""
+        pass
+    
+    def generate_report(self):
+        """レポート生成（責任3）"""
+        pass
+
+
+# Good - 責任を分離
+class User:
+    """ユーザーデータを表現（責任: データ保持）"""
+    def __init__(self, name, email):
+        self.name = name
+        self.email = email
+
+
+class UserRepository:
+    """ユーザーの永続化（責任: データベース操作）"""
+    def save(self, user: User):
+        pass
+    
+    def find_by_email(self, email: str):
+        pass
+
+
+class EmailService:
+    """メール送信（責任: 通知）"""
+    def send_welcome_email(self, user: User):
+        pass
+
+
+class UserReportGenerator:
+    """レポート生成（責任: レポート作成）"""
+    def generate_report(self, user: User):
+        pass
+```
+
+### O - Open/Closed Principle（開放/閉鎖の原則）
+
+**拡張に対して開いていて、修正に対して閉じている**
+
+```python
+# Bad - 新しいタイプを追加するたびに修正が必要
+class DiscountCalculator:
+    def calculate(self, price, customer_type):
+        if customer_type == "regular":
+            return price * 0.95
+        elif customer_type == "premium":
+            return price * 0.90
+        elif customer_type == "vip":
+            return price * 0.85
+        # 新しいタイプを追加するたびにここを修正...
+
+
+# Good - 拡張に開いている
+from abc import ABC, abstractmethod
+
+class DiscountStrategy(ABC):
+    @abstractmethod
+    def calculate(self, price: float) -> float:
+        pass
+
+
+class RegularDiscount(DiscountStrategy):
+    def calculate(self, price: float) -> float:
+        return price * 0.95
+
+
+class PremiumDiscount(DiscountStrategy):
+    def calculate(self, price: float) -> float:
+        return price * 0.90
+
+
+class VIPDiscount(DiscountStrategy):
+    def calculate(self, price: float) -> float:
+        return price * 0.85
+
+
+class DiscountCalculator:
+    def __init__(self, strategy: DiscountStrategy):
+        self.strategy = strategy
+    
+    def calculate_price(self, price: float) -> float:
+        return self.strategy.calculate(price)
+
+
+# 新しいタイプを追加（既存コードを変更しない）
+class SuperVIPDiscount(DiscountStrategy):
+    def calculate(self, price: float) -> float:
+        return price * 0.80
+
+
+# 使用
+calculator = DiscountCalculator(VIPDiscount())
+final_price = calculator.calculate_price(10000)
+```
+
+### L - Liskov Substitution Principle（リスコフの置換原則）
+
+**サブクラスは基底クラスと置き換え可能であるべき**
+
+```python
+# Bad - 置換すると動作が壊れる
+class Rectangle:
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+    
+    def set_width(self, width):
+        self.width = width
+    
+    def set_height(self, height):
+        self.height = height
+    
+    def area(self):
+        return self.width * self.height
+
+
+class Square(Rectangle):
+    def set_width(self, width):
+        self.width = width
+        self.height = width  # 正方形なので高さも変更
+    
+    def set_height(self, height):
+        self.width = height  # 正方形なので幅も変更
+        self.height = height
+
+
+# 問題が発生
+def test_rectangle(rect: Rectangle):
+    rect.set_width(5)
+    rect.set_height(4)
+    assert rect.area() == 20  # Rectangleなら成功、Squareなら失敗！
+
+
+# Good - 正しい設計
+class Shape(ABC):
+    @abstractmethod
+    def area(self) -> float:
+        pass
+
+
+class Rectangle(Shape):
+    def __init__(self, width: float, height: float):
+        self._width = width
+        self._height 
