@@ -1,0 +1,305 @@
+# 新人エンジニア向け研修：PEP（Python Enhancement Proposal）とは？
+
+## PEPって何？
+
+**PEP**（ペップ）= **Python Enhancement Proposal**（Python拡張提案）
+
+Pythonの改善提案書のことで、Pythonの新機能、プロセス、ガイドラインなどを文書化したものです。
+
+簡単に言うと：
+- **Pythonの「公式ルールブック」や「設計書」**
+- Python開発者が「こういう機能を追加したい」「こういうルールにしよう」と提案して議論するためのドキュメント
+
+## 主要なPEP一覧
+
+### 🌟 超重要PEP
+
+#### **PEP 8 - Style Guide for Python Code**
+コーディング規約（一番有名！）
+
+```python
+# PEP 8に従った書き方
+def calculate_total_price(quantity, unit_price):
+    """合計金額を計算する"""
+    total = quantity * unit_price
+    tax = total * 0.1
+    return total + tax
+```
+
+#### **PEP 20 - The Zen of Python**
+Pythonの哲学・設計思想
+
+```python
+>>> import this
+The Zen of Python, by Tim Peters
+
+Beautiful is better than ugly.
+Explicit is better than implicit.
+Simple is better than complex.
+...
+```
+
+日本語訳：
+- 醜いより美しい方がいい
+- 暗黙より明示的な方がいい
+- 複雑より単純な方がいい
+- など全19項目
+
+#### **PEP 257 - Docstring Conventions**
+docstring（ドキュメント文字列）の書き方
+
+```python
+def add_customer(name, email, phone=None):
+    """
+    新規顧客を追加する
+    
+    Args:
+        name (str): 顧客名
+        email (str): メールアドレス
+        phone (str, optional): 電話番号
+    
+    Returns:
+        Customer: 作成された顧客オブジェクト
+    
+    Raises:
+        ValueError: メールアドレスが不正な場合
+    """
+    # 処理...
+```
+
+### 📚 機能に関する重要PEP
+
+#### **PEP 484 - Type Hints**
+型ヒント（Python 3.5+）
+
+```python
+def greet(name: str) -> str:
+    return f"Hello, {name}!"
+
+def calculate_total(prices: list[float]) -> float:
+    return sum(prices)
+
+# 変数の型ヒント
+customer_name: str = "田中太郎"
+order_count: int = 5
+```
+
+#### **PEP 498 - f-strings**
+f文字列（Python 3.6+）
+
+```python
+# 従来の方法
+name = "太郎"
+age = 25
+message = "私の名前は{}で、{}歳です".format(name, age)
+
+# f-string（PEP 498）
+message = f"私の名前は{name}で、{age}歳です"
+
+# 式も使える
+price = 1000
+print(f"税込価格: {price * 1.1}円")
+```
+
+#### **PEP 572 - Assignment Expressions（セイウチ演算子）**
+代入式（Python 3.8+）
+
+```python
+# 従来
+data = get_data()
+if data:
+    process(data)
+
+# セイウチ演算子 :=
+if (data := get_data()):
+    process(data)
+
+# リスト内包表記でも便利
+results = [y for x in data if (y := process(x)) is not None]
+```
+
+#### **PEP 636 - Structural Pattern Matching**
+パターンマッチング（Python 3.10+）
+
+```python
+def process_order(order):
+    match order.status:
+        case "pending":
+            print("注文を処理中")
+        case "completed":
+            print("注文完了")
+        case "cancelled":
+            print("注文キャンセル")
+        case _:
+            print("不明なステータス")
+
+# より複雑なパターン
+match point:
+    case (0, 0):
+        print("原点")
+    case (0, y):
+        print(f"Y軸上: y={y}")
+    case (x, 0):
+        print(f"X軸上: x={x}")
+    case (x, y):
+        print(f"座標: ({x}, {y})")
+```
+
+### 🔧 プロセス・情報系PEP
+
+#### **PEP 1 - PEP Purpose and Guidelines**
+PEP自体の目的とガイドライン
+
+#### **PEP 404 - Python 2.8 Un-release Schedule**
+Python 2.8は永遠にリリースされない（Python 3への移行促進）
+
+#### **PEP 3000 - Python 3000**
+Python 3の設計哲学（Python 2→3の大きな変更）
+
+## PEPの分類
+
+### Type（種類）
+
+1. **Standards Track PEP**
+   - 新機能や実装の提案
+   - 例：PEP 484（型ヒント）、PEP 498（f-strings）
+
+2. **Informational PEP**
+   - ガイドラインや情報提供
+   - 例：PEP 8（コーディング規約）
+
+3. **Process PEP**
+   - Pythonの開発プロセスについて
+   - 例：PEP 1（PEPのガイドライン）
+
+### Status（状態）
+
+- **Draft**: 草案
+- **Accepted**: 承認済み
+- **Final**: 確定
+- **Rejected**: 却下
+- **Withdrawn**: 取り下げ
+
+## よく使うPEP早見表
+
+| PEP番号 | タイトル | 内容 | 重要度 |
+|---------|----------|------|--------|
+| PEP 8 | Style Guide | コーディング規約 | ⭐⭐⭐⭐⭐ |
+| PEP 20 | Zen of Python | Python哲学 | ⭐⭐⭐⭐⭐ |
+| PEP 257 | Docstring | docstring規約 | ⭐⭐⭐⭐ |
+| PEP 484 | Type Hints | 型ヒント | ⭐⭐⭐⭐ |
+| PEP 498 | f-strings | f文字列 | ⭐⭐⭐⭐ |
+| PEP 3107 | Function Annotations | 関数アノテーション | ⭐⭐⭐ |
+| PEP 526 | Variable Annotations | 変数アノテーション | ⭐⭐⭐ |
+| PEP 572 | Walrus Operator | セイウチ演算子 | ⭐⭐⭐ |
+| PEP 636 | Pattern Matching | パターンマッチ | ⭐⭐⭐ |
+
+## PEPの読み方
+
+### 公式サイトで読む
+
+```
+https://peps.python.org/pep-XXXX/
+
+例：
+https://peps.python.org/pep-0008/  # PEP 8
+https://peps.python.org/pep-0020/  # PEP 20
+```
+
+### Pythonインタプリタで読む（PEP 20のみ）
+
+```python
+>>> import this
+The Zen of Python, by Tim Peters
+...
+```
+
+## 実務でよく参照するPEP
+
+### 新人エンジニアが最初に読むべき
+
+1. **PEP 8** - コーディング規約（必読！）
+2. **PEP 20** - Pythonの哲学を理解
+3. **PEP 257** - docstringの書き方
+
+### モダンなPythonコードを書くために
+
+4. **PEP 484** - 型ヒントの使い方
+5. **PEP 498** - f-stringsの使い方
+6. **PEP 3107/526** - アノテーションの理解
+
+## PEPを活用した開発例
+
+```python
+"""
+顧客管理モジュール
+
+PEP 8: モジュール名はsnake_case
+PEP 257: モジュールdocstringを記述
+"""
+
+from typing import Optional  # PEP 484
+from dataclasses import dataclass  # PEP 557
+
+
+@dataclass  # PEP 557 - Data Classes
+class Customer:
+    """
+    顧客データクラス
+    
+    PEP 257に従ったdocstring
+    """
+    name: str  # PEP 484 - Type Hints
+    email: str
+    phone: Optional[str] = None  # PEP 484
+
+
+def create_customer(
+    name: str, 
+    email: str, 
+    phone: Optional[str] = None
+) -> Customer:  # PEP 484 - Return type hint
+    """
+    新規顧客を作成
+    
+    Args:
+        name: 顧客名
+        email: メールアドレス
+        phone: 電話番号（オプション）
+    
+    Returns:
+        作成された顧客オブジェクト
+    """
+    # PEP 8: 関数名はsnake_case、4スペースインデント
+    customer = Customer(name, email, phone)
+    
+    # PEP 498: f-string使用
+    print(f"顧客作成: {customer.name}")
+    
+    return customer
+
+
+if __name__ == "__main__":
+    # PEP 8: メイン処理の書き方
+    customer = create_customer(
+        name="田中太郎",
+        email="tanaka@example.com"
+    )
+```
+
+## まとめ
+
+**PEPは：**
+
+✅ Pythonの公式提案・ガイドライン文書  
+✅ 番号で管理されている（PEP 8、PEP 20など）  
+✅ 新機能、スタイルガイド、プロセスなどを定義  
+✅ 特に**PEP 8**は必読！  
+
+**新人エンジニアがまず覚えること：**
+
+1. **PEP 8** = コーディング規約（最重要！）
+2. **PEP** = Python Enhancement Proposal の略
+3. 公式サイト https://peps.python.org/ で読める
+
+PEPを理解することで、より良いPythonコードが書けるようになります！
