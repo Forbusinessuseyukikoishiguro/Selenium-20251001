@@ -1,0 +1,159 @@
+Pythonの新人向けに、オブジェクト設計の基本を動くコードで説明しますね！
+
+## 1. 基本的なクラス（ゲッター・セッター）
+
+```python
+class Person:
+    def __init__(self, name, age):
+        self._name = name  # アンダースコアで「内部データ」を示す
+        self._age = age
+    
+    # ゲッター：値を取得
+    def get_name(self):
+        return self._name
+    
+    # セッター：値を設定
+    def set_name(self, name):
+        self._name = name
+    
+    def get_age(self):
+        return self._age
+    
+    def set_age(self, age):
+        if age < 0:
+            print("年齢は0以上にしてください")
+            return
+        self._age = age
+
+# 使ってみる
+person = Person("田中太郎", 25)
+print(person.get_name())  # 田中太郎
+person.set_age(26)
+print(person.get_age())  # 26
+```
+
+## 2. Pythonらしい書き方：プロパティ（デコレーター使用）
+
+```python
+class Person:
+    def __init__(self, name, age):
+        self._name = name
+        self._age = age
+    
+    @property  # ゲッターのデコレーター
+    def name(self):
+        return self._name
+    
+    @name.setter  # セッターのデコレーター
+    def name(self, value):
+        self._name = value
+    
+    @property
+    def age(self):
+        return self._age
+    
+    @age.setter
+    def age(self, value):
+        if value < 0:
+            raise ValueError("年齢は0以上にしてください")
+        self._age = value
+    
+    # 普通のメソッド
+    def introduce(self):
+        return f"こんにちは、{self.name}です。{self.age}歳です。"
+
+# 使ってみる
+person = Person("佐藤花子", 30)
+print(person.name)  # 佐藤花子（メソッドじゃなく属性みたいに使える！）
+person.age = 31  # セッターが呼ばれる
+print(person.introduce())  # こんにちは、佐藤花子です。31歳です。
+```
+
+## 3. 実践的な例：銀行口座クラス
+
+```python
+class BankAccount:
+    def __init__(self, owner, balance=0):
+        self._owner = owner
+        self._balance = balance
+        self._transactions = []  # 取引履歴
+    
+    @property
+    def owner(self):
+        return self._owner
+    
+    @property
+    def balance(self):
+        return self._balance
+    
+    # メソッド：入金
+    def deposit(self, amount):
+        if amount <= 0:
+            return "入金額は0より大きくしてください"
+        self._balance += amount
+        self._transactions.append(f"入金: +{amount}円")
+        return f"{amount}円を入金しました。残高: {self._balance}円"
+    
+    # メソッド：出金
+    def withdraw(self, amount):
+        if amount <= 0:
+            return "出金額は0より大きくしてください"
+        if amount > self._balance:
+            return "残高不足です"
+        self._balance -= amount
+        self._transactions.append(f"出金: -{amount}円")
+        return f"{amount}円を出金しました。残高: {self._balance}円"
+    
+    # メソッド：履歴表示
+    def show_transactions(self):
+        print(f"=== {self.owner}さんの取引履歴 ===")
+        for transaction in self._transactions:
+            print(transaction)
+        print(f"現在の残高: {self._balance}円")
+
+# 実際に動かしてみる
+account = BankAccount("山田太郎", 1000)
+print(account.deposit(5000))  # 5000円を入金しました。残高: 6000円
+print(account.withdraw(2000))  # 2000円を出金しました。残高: 4000円
+print(account.balance)  # 4000（プロパティとして取得）
+account.show_transactions()
+```
+
+## 4. デコレーターの自作例
+
+```python
+# デコレーター：実行時間を計測
+import time
+
+def timer(func):
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        print(f"{func.__name__}の実行時間: {end - start:.4f}秒")
+        return result
+    return wrapper
+
+class DataProcessor:
+    @timer  # このデコレーターで処理時間を測る
+    def heavy_calculation(self, n):
+        """重い計算のシミュレーション"""
+        total = 0
+        for i in range(n):
+            total += i ** 2
+        return total
+
+# 使ってみる
+processor = DataProcessor()
+result = processor.heavy_calculation(1000000)
+print(f"結果: {result}")
+```
+
+## ポイントまとめ
+
+1. **ゲッター/セッター**: データの取得・設定を制御
+2. **@property**: Pythonではこれを使うのが主流（シンプル！）
+3. **メソッド**: オブジェクトができる「行動」
+4. **デコレーター**: 関数に機能を追加する便利な仕組み
+
+このコードをコピーして実際に動かしてみてください！質問があればどうぞ！
