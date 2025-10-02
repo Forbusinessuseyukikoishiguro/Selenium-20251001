@@ -1,0 +1,319 @@
+# 新人エンジニア向け研修：PEP 8とPythonコーディングルール
+
+## PEP 8とは？
+
+**PEP 8**（Python Enhancement Proposal 8）は、Pythonの公式コーディング規約です。Pythonコミュニティ全体で推奨されているスタイルガイドで、読みやすく一貫性のあるコードを書くための標準ルールです。
+
+## PEP 8の主要ルール
+
+### 1. インデント
+
+**4スペースを使用**（タブは使わない）
+
+```python
+# Good
+def calculate_price(quantity, unit_price):
+    total = quantity * unit_price
+    tax = total * 0.1
+    return total + tax
+
+# Bad（タブや2スペースは使わない）
+def calculate_price(quantity, unit_price):
+  total = quantity * unit_price
+  return total
+```
+
+### 2. 1行の最大文字数
+
+**79文字以内**を推奨（コメントやdocstringは72文字）
+
+```python
+# Good - 長い行は適切に改行
+result = some_function(
+    argument1, argument2,
+    argument3, argument4
+)
+
+# Bad - 長すぎる
+result = some_function(argument1, argument2, argument3, argument4, argument5, argument6)
+```
+
+### 3. 空行の使い方
+
+**トップレベルの関数・クラス定義の前後に2行**
+
+```python
+import os
+
+
+def first_function():
+    pass
+
+
+def second_function():
+    pass
+
+
+class MyClass:
+    pass
+```
+
+**メソッド定義の間に1行**
+
+```python
+class DaifukuShop:
+    def __init__(self):
+        self.inventory = {}
+    
+    def add_stock(self, flavor, quantity):
+        self.inventory[flavor] = quantity
+    
+    def get_stock(self, flavor):
+        return self.inventory.get(flavor, 0)
+```
+
+### 4. import文
+
+**順序：標準ライブラリ → サードパーティ → 自作モジュール**
+
+```python
+# Good
+import os
+import sys
+from datetime import datetime
+
+import numpy as np
+import pandas as pd
+
+from my_project.models import Order
+from my_project.utils import calculate_tax
+```
+
+**1行に1つのimport**
+
+```python
+# Good
+import os
+import sys
+
+# Bad
+import os, sys
+```
+
+### 5. 空白の使い方
+
+**演算子の前後にスペース**
+
+```python
+# Good
+x = 1
+y = 2
+total = x + y
+
+# Bad
+x=1
+y=2
+total=x+y
+```
+
+**カンマの後にスペース**
+
+```python
+# Good
+my_list = [1, 2, 3, 4]
+def function(a, b, c):
+    pass
+
+# Bad
+my_list = [1,2,3,4]
+def function(a,b,c):
+    pass
+```
+
+**括弧の内側にスペースを入れない**
+
+```python
+# Good
+result = function(arg1, arg2)
+my_list = [1, 2, 3]
+
+# Bad
+result = function( arg1, arg2 )
+my_list = [ 1, 2, 3 ]
+```
+
+### 6. 命名規則
+
+| 対象 | スタイル | 例 |
+|------|----------|-----|
+| 変数・関数 | snake_case | `customer_name`, `calculate_total()` |
+| クラス | PascalCase | `DaifukuOrder`, `CustomerData` |
+| 定数 | UPPER_CASE | `MAX_QUANTITY`, `TAX_RATE` |
+| プライベート変数 | _leading_underscore | `_internal_value` |
+| モジュール | lowercase | `utils.py`, `models.py` |
+
+```python
+# Good
+class OrderProcessor:
+    MAX_ITEMS = 100
+    
+    def __init__(self):
+        self._cache = {}
+    
+    def process_order(self, order_id):
+        return self._validate_order(order_id)
+    
+    def _validate_order(self, order_id):
+        # プライベートメソッド
+        pass
+```
+
+### 7. 比較演算
+
+**None、True、Falseの比較にはisを使う**
+
+```python
+# Good
+if value is None:
+    pass
+
+if flag is True:
+    pass
+
+# Bad
+if value == None:
+    pass
+```
+
+**真偽値の直接評価**
+
+```python
+# Good
+if my_list:
+    pass
+
+if not my_string:
+    pass
+
+# Bad
+if len(my_list) > 0:
+    pass
+
+if my_string == "":
+    pass
+```
+
+### 8. 文字列
+
+**一貫したクォート使用**
+
+```python
+# Good - シングルかダブルどちらかに統一
+message = 'Hello, World!'
+name = 'ふわふわ大福店'
+
+# または
+message = "Hello, World!"
+name = "ふわふわ大福店"
+
+# docstringはダブルクォート3つ
+def example():
+    """
+    これはdocstringです
+    """
+    pass
+```
+
+### 9. コメント
+
+**コードと同じレベルにインデント**
+
+```python
+# Good
+def calculate_total(items):
+    # 消費税を計算
+    subtotal = sum(items)
+    tax = subtotal * 0.1
+    return subtotal + tax
+
+# Bad
+def calculate_total(items):
+# 消費税を計算
+    subtotal = sum(items)
+    tax = subtotal * 0.1
+    return subtotal + tax
+```
+
+## PEP 8チェックツール
+
+### flake8
+
+コマンドラインでPEP 8違反をチェック
+
+```bash
+# インストール
+pip install flake8
+
+# チェック実行
+flake8 my_script.py
+```
+
+### black
+
+自動フォーマッター（PEP 8準拠に自動整形）
+
+```bash
+# インストール
+pip install black
+
+# フォーマット実行
+black my_script.py
+```
+
+### pylint
+
+より詳細なコード品質チェック
+
+```bash
+# インストール
+pip install pylint
+
+# チェック実行
+pylint my_script.py
+```
+
+## よくある間違い例
+
+```python
+# Bad - 複数の問題
+def calculateTotal(x,y):
+  result=x+y
+  return result
+
+# Good - PEP 8準拠
+def calculate_total(x, y):
+    result = x + y
+    return result
+
+
+# Bad - スペースの使い方
+my_list = [ 1 , 2 , 3 ]
+result = function (arg)
+
+# Good
+my_list = [1, 2, 3]
+result = function(arg)
+```
+
+## まとめ
+
+PEP 8を守ることで：
+
+✅ チーム全体でコードの見た目が統一される  
+✅ 他の人がコードを読みやすくなる  
+✅ バグを見つけやすくなる  
+✅ Pythonコミュニティの標準に従える  
+
+最初は覚えることが多く感じるかもしれませんが、エディタの設定やツールを使えば自動的にチェック・修正できます。慣れてくれば自然と書けるようになりますよ！
+
+**参考リンク：** https://peps.python.org/pep-0008/
