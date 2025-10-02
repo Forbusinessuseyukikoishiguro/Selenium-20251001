@@ -1,0 +1,402 @@
+# 新人エンジニア向け研修：Pythonモジュールのルールとベストプラクティス
+
+## モジュールとは？
+
+**モジュール**は、Pythonコードをまとめた`.py`ファイルのことです。関連する関数やクラスをモジュールにまとめることで、コードの再利用性と保守性が向上します。
+
+## モジュールの命名規則
+
+### 基本ルール
+
+**小文字のsnake_case**を使用（PEP 8準拠）
+
+```
+# Good
+customer_manager.py
+order_processor.py
+daifuku_inventory.py
+utils.py
+config.py
+
+# Bad
+CustomerManager.py
+Order-Processor.py
+daifukuInventory.py
+UTILS.py
+```
+
+**短く、分かりやすい名前**
+
+```
+# Good
+models.py
+validators.py
+db_connector.py
+
+# Bad
+all_database_models_and_schemas.py
+stuff.py
+tmp.py
+module1.py
+```
+
+**数字で始めない、予約語を避ける**
+
+```
+# Bad
+class.py        # 予約語
+import.py       # 予約語
+123_utils.py    # 数字始まり
+
+# Good
+class_manager.py
+import_utils.py
+utils_v2.py
+```
+
+## プロジェクト構成例
+
+### 小規模プロジェクト
+
+```
+daifuku_shop/
+├── __init__.py
+├── models.py           # データモデル
+├── views.py            # ビュー処理
+├── controllers.py      # ビジネスロジック
+├── utils.py            # ユーティリティ関数
+└── config.py           # 設定情報
+```
+
+### 中規模プロジェクト
+
+```
+daifuku_shop/
+├── __init__.py
+├── models/
+│   ├── __init__.py
+│   ├── order.py
+│   ├── customer.py
+│   └── product.py
+├── services/
+│   ├── __init__.py
+│   ├── order_service.py
+│   └── inventory_service.py
+├── utils/
+│   ├── __init__.py
+│   ├── validators.py
+│   └── formatters.py
+├── config.py
+└── constants.py
+```
+
+## モジュールの書き方
+
+### 1. モジュールdocstring
+
+**ファイルの先頭に説明を書く**
+
+```python
+# order_processor.py
+"""
+注文処理モジュール
+
+このモジュールは大福の注文に関する処理を提供します。
+- 注文の作成
+- 注文の検証
+- 在庫チェック
+"""
+
+import os
+from datetime import datetime
+
+# 以下、コード...
+```
+
+### 2. モジュール内の構成順序
+
+**PEP 8推奨の順序**
+
+```python
+# customer_manager.py
+"""モジュールdocstring"""
+
+# 1. 標準ライブラリ
+import os
+import sys
+from datetime import datetime
+
+# 2. サードパーティライブラリ
+import requests
+from flask import Flask
+
+# 3. 自作モジュール
+from daifuku_shop.models import Customer
+from daifuku_shop.utils import validate_email
+
+# 4. 定数定義
+MAX_CUSTOMERS = 1000
+DEFAULT_COUNTRY = "Japan"
+
+# 5. 例外クラス
+class CustomerNotFoundError(Exception):
+    """顧客が見つからない場合の例外"""
+    pass
+
+# 6. クラス定義
+class CustomerManager:
+    """顧客管理クラス"""
+    pass
+
+# 7. 関数定義
+def create_customer(name, email):
+    """顧客を作成する"""
+    pass
+
+# 8. メイン処理（必要な場合）
+if __name__ == "__main__":
+    # テストコードなど
+    pass
+```
+
+### 3. __init__.pyの使い方
+
+**パッケージを定義する**
+
+```python
+# daifuku_shop/__init__.py
+"""
+ふわふわ大福店管理システム
+
+大福の注文、在庫、顧客管理を行うパッケージ
+"""
+
+__version__ = "1.0.0"
+__author__ = "ふわふわ大福店開発チーム"
+
+# パッケージレベルでインポートを公開
+from daifuku_shop.models.order import Order
+from daifuku_shop.models.customer import Customer
+from daifuku_shop.services.order_service import OrderService
+
+# __all__で公開するものを明示
+__all__ = [
+    "Order",
+    "Customer",
+    "OrderService",
+]
+```
+
+**これにより、使う側はシンプルに書ける**
+
+```python
+# Good - __init__.pyで定義済み
+from daifuku_shop import Order, Customer
+
+# Bad - 深い階層を指定
+from daifuku_shop.models.order import Order
+from daifuku_shop.models.customer import Customer
+```
+
+### 4. プライベート変数・関数
+
+**アンダースコアで始める**
+
+```python
+# utils.py
+
+# 公開関数
+def calculate_total(items):
+    """合計金額を計算（公開API）"""
+    return _apply_tax(_sum_items(items))
+
+# プライベート関数（モジュール内部用）
+def _sum_items(items):
+    """アイテムの合計（内部使用）"""
+    return sum(item.price for item in items)
+
+def _apply_tax(amount):
+    """税金適用（内部使用）"""
+    return amount * 1.1
+
+# __all__で公開関数を明示
+__all__ = ["calculate_total"]
+```
+
+### 5. 循環インポートを避ける
+
+**Bad - 循環参照が発生**
+
+```python
+# order.py
+from customer import Customer
+
+class Order:
+    def __init__(self, customer):
+        self.customer = customer
+
+# customer.py
+from order import Order  # ← 循環参照！
+
+class Customer:
+    def __init__(self):
+        self.orders = []
+```
+
+**Good - 構造を見直す**
+
+```python
+# models/order.py
+class Order:
+    def __init__(self, customer_id):
+        self.customer_id = customer_id
+
+# models/customer.py
+class Customer:
+    def __init__(self):
+        self.id = None
+        self.orders = []
+
+# services/order_service.py
+from models.order import Order
+from models.customer import Customer
+
+def create_order(customer, items):
+    # ここで両方使う
+    order = Order(customer.id)
+    return order
+```
+
+## インポートのベストプラクティス
+
+### 1. 絶対インポート vs 相対インポート
+
+**絶対インポート（推奨）**
+
+```python
+# daifuku_shop/services/order_service.py
+
+# Good - 絶対インポート
+from daifuku_shop.models.order import Order
+from daifuku_shop.utils.validators import validate_order
+```
+
+**相対インポート（パッケージ内のみ）**
+
+```python
+# daifuku_shop/services/order_service.py
+
+# OK - 相対インポート（同じパッケージ内）
+from ..models.order import Order
+from ..utils.validators import validate_order
+from .inventory_service import check_stock
+```
+
+### 2. インポートの粒度
+
+```python
+# Good - 必要なものだけインポート
+from datetime import datetime, timedelta
+from collections import defaultdict
+
+# Bad - 全部インポート（名前空間が汚れる）
+from datetime import *
+from collections import *
+
+# Good - モジュール全体をインポート（多く使う場合）
+import numpy as np
+import pandas as pd
+```
+
+### 3. エイリアスの使用
+
+```python
+# Good - 長い名前に短いエイリアス
+import daifuku_shop.services.order_processor as op
+from daifuku_shop.models import order as order_model
+
+# 慣習的なエイリアス
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+```
+
+## モジュール設計の原則
+
+### 1. 単一責任の原則
+
+**1つのモジュールは1つの責務**
+
+```python
+# Good - 明確な責務
+# email_sender.py - メール送信のみ
+# order_validator.py - 注文検証のみ
+# inventory_manager.py - 在庫管理のみ
+
+# Bad - 複数の責務
+# utils.py - メール送信、注文検証、在庫管理、その他なんでも
+```
+
+### 2. 疎結合
+
+**モジュール間の依存を最小限に**
+
+```python
+# Good - インターフェースを通じた疎結合
+class OrderService:
+    def __init__(self, inventory_checker):
+        self.inventory_checker = inventory_checker
+    
+    def create_order(self, items):
+        if self.inventory_checker.has_stock(items):
+            # 処理
+            pass
+
+# Bad - 直接的な結合
+class OrderService:
+    def create_order(self, items):
+        from inventory_manager import InventoryManager
+        inv = InventoryManager()
+        # 処理...
+```
+
+### 3. 適切な粒度
+
+```
+# Too fine-grained（細かすぎ）
+calculate_tax.py          # 1関数だけ
+format_date.py           # 1関数だけ
+validate_email.py        # 1関数だけ
+
+# Good（適切な粒度）
+tax_calculator.py        # 税金関連の複数関数
+formatters.py            # フォーマット関連の複数関数
+validators.py            # バリデーション関連の複数関数
+
+# Too coarse-grained（大きすぎ）
+utils.py                 # あらゆる機能が入っている
+helpers.py               # 関係ない機能の寄せ集め
+```
+
+## チェックリスト
+
+モジュールを作成する前に確認：
+
+- [ ] モジュール名は小文字のsnake_caseですか？
+- [ ] モジュールdocstringを書きましたか？
+- [ ] インポート順序は正しいですか？（標準→サード→自作）
+- [ ] 循環インポートはありませんか？
+- [ ] 1つのモジュールは1つの責務ですか？
+- [ ] __init__.pyで公開APIを定義しましたか？
+- [ ] プライベート関数は`_`で始まっていますか？
+
+## まとめ
+
+良いモジュール設計は：
+
+✅ **再利用性**が高い - 他のプロジェクトでも使える  
+✅ **保守性**が高い - 修正や拡張が容易  
+✅ **可読性**が高い - 何をするモジュールか明確  
+✅ **テスト**しやすい - 独立してテストできる  
+
+最初は完璧でなくても大丈夫です。コードレビューを通じて、チームで改善していきましょう！
